@@ -75,11 +75,12 @@ install_app(){
 
     ln -sf "$APP_EXECUTABLE" "$LINK"
 
-    if [ ! -f "$INSTALL_DIR/icon.png" ]; then
-        echo "No icon found in ZIP, downloading fallback icon…" 
-        fallback_icon_url='https://github.com/grayankit/dartotsuInstall/blob/657107696d1d8aab4a0394273a01c667c6971e8e/Dartotsu.png'
+    # fallback icon
+    if [ ! -f "$ICON_FILE" ]; then
+        echo "Downloading fallback icon…" 
+        fallback_icon_url='https://raw.githubusercontent.com/grayankit/dartotsuInstall/main/Dartotsu.png'
 
-        if ! curl -sL "$fallback_icon_url" -o "$INSTALL_DIR/icon.png"; then
+        if ! wget -q "$fallback_icon_url" -O "$ICON_FILE"; then
             echo "Failed to download fallback icon from $fallback_icon_url"
         fi
     fi
