@@ -167,13 +167,12 @@ show_menu() {
     echo -e "${BOLD}${PURPLE}│${RESET}                                                   ${PURPLE}${BOLD}│${RESET}"
     echo -e "${BOLD}${PURPLE}│${RESET}  ${ICON_INSTALL} ${GREEN}${BOLD}[I]${RESET} Install Dartotsu                      ${PURPLE}${BOLD}│${RESET}"
     echo -e "${BOLD}${PURPLE}│${RESET}  ${ICON_UPDATE} ${YELLOW}${BOLD}[U]${RESET} Update Dartotsu                       ${PURPLE}${BOLD}│${RESET}"
-    echo -e "${BOLD}${PURPLE}│${RESET}  ${ICON_ALPHA} ${RED}${BOLD}[A]${RESET} Install Alpha Build                   ${PURPLE}${BOLD}│${RESET}"
     echo -e "${BOLD}${PURPLE}│${RESET}  ${ICON_UNINSTALL} ${RED}${BOLD}[R]${RESET} Remove Dartotsu                       ${PURPLE}${BOLD}│${RESET}"
     echo -e "${BOLD}${PURPLE}│${RESET}  ${ICON_SPARKLES} ${CYAN}${BOLD}[Q]${RESET} Quit                                  ${PURPLE}${BOLD}│${RESET}"
     echo -e "${BOLD}${PURPLE}│${RESET}                                                   ${PURPLE}${BOLD}│${RESET}"
     echo -e "${BOLD}${PURPLE}└────────────────────────────────────────────────────┘${RESET}"
     echo
-    echo -ne "${BOLD}${WHITE}Your choice${RESET} ${GRAY}(I/U/A/R/Q)${RESET}: "
+    echo -ne "${BOLD}${WHITE}Your choice${RESET} ${GRAY}(I/U/R/Q)${RESET}: "
 }
 
 # Version selection menu
@@ -293,8 +292,6 @@ get_alpha_file_id() {
 }
 
 install_app() {
-    local install_type="$1"  # Can be 'alpha', 'stable', or empty for menu selection
-    
     section_header "INSTALLATION PROCESS" "${ICON_INSTALL}"
     
     # Check dependencies
@@ -303,42 +300,39 @@ install_app() {
     echo -e "  ${GREEN}${ICON_SUCCESS} All dependencies found!${RESET}"
     echo
     
-    local ASSET_URL=""
-    local DOWNLOAD_TYPE=""
+    # Version selection
+    version_menu
+    read -n 1 ANSWER
+    echo
     
-    if [ "$install_type" = "alpha" ]; then
-        # Direct alpha installation
-        info_msg "Preparing alpha build download..."
-        local FILE_ID=$(get_alpha_file_id)
-        ASSET_URL="https://drive.google.com/uc?id=${FILE_ID}&export=download"
-        DOWNLOAD_TYPE="alpha"
-    else
-        # Version selection for regular install
-        version_menu
-        read -n 1 ANSWER
-        echo
-        
-        case "${ANSWER,,}" in
-            p)
-                API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
-                info_msg "Fetching pre-release versions..."
-                ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
-                DOWNLOAD_TYPE="github"
-                ;;
-            s|"")
-                API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-                info_msg "Fetching stable release..."
-                ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
-                DOWNLOAD_TYPE="github"
-                ;;
-            *)
-                warn_msg "Invalid selection, defaulting to stable release..."
-                API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-                ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
-                DOWNLOAD_TYPE="github"
-                ;;
-        esac
-    fi
+    local ASSET_URL=""
+    
+    case "${ANSWER,,}" in
+        a)
+            info_msg "Preparing alpha build download..."
+            local FILE_ID=$(get_alpha_file_id)
+            ASSET_URL="https://drive.google.com/uc?id=${FILE_ID}&export=download"
+            local DOWNLOAD_TYPE="alpha"
+            ;;
+        p)
+            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
+            info_msg "Fetching pre-release versions..."
+            ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
+            local DOWNLOAD_TYPE="github"
+            ;;
+        s|"")
+            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+            info_msg "Fetching stable release..."
+            ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
+            local DOWNLOAD_TYPE="github"
+            ;;
+        *)
+            warn_msg "Invalid selection, defaulting to stable release..."
+            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+            ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
+            local DOWNLOAD_TYPE="github"
+            ;;
+    esac
     
     if [ -z "$ASSET_URL" ]; then
         error_exit "No downloadable assets found in the release!"
