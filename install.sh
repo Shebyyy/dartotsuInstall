@@ -16,9 +16,6 @@ LINK="$HOME/.local/bin/$APP_NAME"
 DESKTOP_FILE="$HOME/.local/share/applications/$APP_NAME.desktop"
 ICON_FILE="$HOME/.local/share/icons/$APP_NAME.png"
 
-# Alpha download URLs
-FILE_ID_FILE='https://raw.githubusercontent.com/aayush2622/Dartotsu/main/scripts/latest.txt'
-
 # =============================================================================
 # 🎨 COLORS & STYLING
 # =============================================================================
@@ -55,7 +52,7 @@ ICON_INSTALL="📦"
 ICON_UNINSTALL="🗑️ "
 ICON_UPDATE="🔄"
 ICON_SPARKLES="✨"
-ICON_ALPHA="🔥"
+ICON_FLASK="🧪"
 
 # =============================================================================
 # 🎭 ANIMATION & UI FUNCTIONS
@@ -182,7 +179,7 @@ version_menu() {
     echo -e "${BOLD}${CYAN}│${RESET}                                                   ${CYAN}${BOLD}│${RESET}"
     echo -e "${BOLD}${CYAN}│${RESET}  ${ICON_ROCKET} ${GREEN}${BOLD}[S]${RESET} Stable Release ${GRAY}(Recommended)${RESET}          ${CYAN}${BOLD}│${RESET}"
     echo -e "${BOLD}${CYAN}│${RESET}  ${ICON_SPARKLES} ${YELLOW}${BOLD}[P]${RESET} Pre-release ${GRAY}(Latest Features)${RESET}        ${CYAN}${BOLD}│${RESET}"
-    echo -e "${BOLD}${CYAN}│${RESET}  ${ICON_ALPHA} ${RED}${BOLD}[A]${RESET} Alpha Build ${GRAY}(Experimental)${RESET}           ${CYAN}${BOLD}│${RESET}"
+    echo -e "${BOLD}${CYAN}│${RESET}  ${ICON_FLASK} ${BLUE}${BOLD}[A]${RESET} Alpha Build ${GRAY}(Experimental)${RESET}          ${CYAN}${BOLD}│${RESET}"
     echo -e "${BOLD}${CYAN}│${RESET}                                                   ${CYAN}${BOLD}│${RESET}"
     echo -e "${BOLD}${CYAN}└────────────────────────────────────────────────────┘${RESET}"
     echo
@@ -212,52 +209,17 @@ check_dependencies() {
     fi
 }
 
-# Function to download from Google Drive with large file handling
-download_gdrive_file() {
-    local file_id="$1"
-    local output="$2"
-    local filename=$(basename "$output")
-    
-    echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Downloading ${BOLD}${filename}${RESET} from Google Drive..."
-    
-    # First attempt - direct download
-    local download_url="https://drive.google.com/uc?id=${file_id}&export=download"
-    
-    # Download with curl, following redirects and handling large files
-    if curl -sL -o "$output" -C - "$download_url" 2>/dev/null; then
-        echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
-        return 0
-    fi
-    
-    # If direct download fails, try with confirmation token (for large files)
-    local temp_cookies="/tmp/cookies.txt"
-    local temp_page="/tmp/download_page.html"
-    
-    # Get the download page and extract confirmation token
-    curl -sc "$temp_cookies" -o "$temp_page" "$download_url" 2>/dev/null
-    
-    # Extract confirmation token from the page
-    local confirm_token=$(grep -o 'confirm=[^&]*' "$temp_page" | head -1 | cut -d'=' -f2)
-    
-    if [ -n "$confirm_token" ]; then
-        local confirmed_url="https://drive.google.com/uc?id=${file_id}&export=download&confirm=${confirm_token}"
-        if curl -sL -b "$temp_cookies" -o "$output" "$confirmed_url" 2>/dev/null; then
-            echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
-            rm -f "$temp_cookies" "$temp_page"
-            return 0
-        fi
-    fi
-    
-    # Cleanup temp files
-    rm -f "$temp_cookies" "$temp_page"
-    echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
-    return 1
-}
-
 download_with_progress() {
     local url="$1"
     local output="$2"
-    local filename=$(basename "$url")
+    local filename
+    
+    # Use output filename if URL is complex (like GDrive)
+    if [[ "$url" == *"drive.google.com"* ]]; then
+        filename="$APP_NAME-alpha.zip"
+    else
+        filename=$(basename "$url")
+    fi
     
     echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Downloading ${BOLD}${filename}${RESET}..."
     
@@ -276,21 +238,6 @@ download_with_progress() {
     fi
 }
 
-# Function to get alpha build file ID
-get_alpha_file_id() {
-    echo -ne "${CYAN}${ICON_INFO}${RESET} Fetching alpha build file ID..."
-    
-    local file_id=$(curl -s "$FILE_ID_FILE" 2>/dev/null | tr -d '\n\r' | sed 's/[[:space:]]*$//')
-    
-    if [ -z "$file_id" ]; then
-        echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
-        error_exit "Error retrieving File ID from $FILE_ID_FILE"
-    fi
-    
-    echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
-    echo "$file_id"
-}
-
 install_app() {
     section_header "INSTALLATION PROCESS" "${ICON_INSTALL}"
     
@@ -305,50 +252,46 @@ install_app() {
     read -n 1 ANSWER
     echo
     
-    local ASSET_URL=""
+    # Default to stable if no asset URL is found
+    ASSET_URL=""
     
     case "${ANSWER,,}" in
-        a)
-            info_msg "Preparing alpha build download..."
-            local FILE_ID=$(get_alpha_file_id)
-            ASSET_URL="https://drive.google.com/uc?id=${FILE_ID}&export=download"
-            local DOWNLOAD_TYPE="alpha"
-            ;;
         p)
             API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
             info_msg "Fetching pre-release versions..."
             ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
-            local DOWNLOAD_TYPE="github"
+            ;;
+        a)
+            info_msg "Fetching alpha build info..."
+            local FILE_ID_FILE='https://raw.githubusercontent.com/aayush2622/Dartotsu/main/scripts/latest.txt'
+            local FILE_ID
+            FILE_ID="$(curl -s "$FILE_ID_FILE")"
+            if [ -z "$FILE_ID" ]; then
+                error_exit "Failed to retrieve File ID from $FILE_ID_FILE"
+            fi
+            info_msg "Found Alpha build with File ID: ${BOLD}${FILE_ID}${RESET}"
+            ASSET_URL="https://drive.google.com/uc?export=download&id=${FILE_ID}"
             ;;
         s|"")
             API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
             info_msg "Fetching stable release..."
             ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
-            local DOWNLOAD_TYPE="github"
             ;;
         *)
             warn_msg "Invalid selection, defaulting to stable release..."
             API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
             ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
-            local DOWNLOAD_TYPE="github"
             ;;
     esac
     
     if [ -z "$ASSET_URL" ]; then
-        error_exit "No downloadable assets found in the release!"
+        error_exit "No downloadable assets found for the selected version!"
     fi
     
-    # Download based on type
+    # Download
     echo
-    if [ "$DOWNLOAD_TYPE" = "alpha" ]; then
-        local FILE_ID=$(echo "$ASSET_URL" | grep -o 'id=[^&]*' | cut -d'=' -f2)
-        if ! download_gdrive_file "$FILE_ID" "/tmp/$APP_NAME.zip"; then
-            error_exit "Alpha build download failed!"
-        fi
-    else
-        if ! download_with_progress "$ASSET_URL" "/tmp/$APP_NAME.zip"; then
-            error_exit "Download failed!"
-        fi
+    if ! download_with_progress "$ASSET_URL" "/tmp/$APP_NAME.zip"; then
+        error_exit "Download failed!"
     fi
     
     # Installation
@@ -363,7 +306,7 @@ install_app() {
     mkdir -p "$INSTALL_DIR"
     
     echo -ne "${CYAN}${ICON_INSTALL}${RESET} Extracting files..."
-    if unzip "/tmp/$APP_NAME.zip" -d "$INSTALL_DIR" > /dev/null 2>&1; then
+    if unzip -o "/tmp/$APP_NAME.zip" -d "$INSTALL_DIR" > /dev/null 2>&1; then
         echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
     else
         echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
