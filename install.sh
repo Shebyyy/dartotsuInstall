@@ -73,21 +73,6 @@ spinner() {
     printf "    \b\b\b\b"
 }
 
-# Progress bar
-progress_bar() {
-    local current=$1
-    local total=$2
-    local width=50
-    local percentage=$((current * 100 / total))
-    local filled=$((current * width / total))
-    local empty=$((width - filled))
-    
-    printf "\r${BOLD}Progress: ${RESET}["
-    printf "${GREEN}%*s${RESET}" $filled | tr ' ' '█'
-    printf "%*s" $empty | tr ' ' '░'
-    printf "] ${BOLD}%d%%${RESET}" $percentage
-}
-
 # Animated text typing effect
 type_text() {
     local text="$1"
@@ -209,12 +194,46 @@ check_dependencies() {
     fi
 }
 
+# NEW: Dedicated function for Google Drive downloads
+download_gdrive() {
+    local url="$1"
+    local output_file="$2"
+    local file_id
+    file_id=$(echo "${url}" | sed -r 's/.*id=([^&]+).*/\1/')
+    local cookies_file="/tmp/gdrive-cookies.txt"
+
+    # Step 1: Get the confirmation token & cookie
+    local response
+    response=$(wget --quiet --save-cookies "$cookies_file" --keep-session-cookies --no-check-certificate "https://docs.google.com/uc?export=download&id=${file_id}" -O- 2>&1)
+    
+    local confirm_token
+    confirm_token=$(echo "$response" | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')
+    
+    # Step 2: Download the actual file with the cookie and token
+    if [ -n "$confirm_token" ]; then
+        wget --quiet --load-cookies "$cookies_file" -O "$output_file" "https://docs.google.com/uc?export=download&confirm=${confirm_token}&id=${file_id}"
+    else
+        # If no token is needed (for small files), the first response is the file itself
+        echo "$response" > "$output_file"
+    fi
+    
+    rm -f "$cookies_file"
+    
+    # Verify if the downloaded file is a zip file, not an HTML page
+    if ! file "$output_file" | grep -q "Zip archive data"; then
+        return 1 # Return failure
+    fi
+    
+    return 0 # Return success
+}
+
+
+# UPDATED: Handles both regular and GDrive downloads
 download_with_progress() {
     local url="$1"
     local output="$2"
     local filename
-    
-    # Use output filename if URL is complex (like GDrive)
+
     if [[ "$url" == *"drive.google.com"* ]]; then
         filename="$APP_NAME-alpha.zip"
     else
@@ -223,12 +242,20 @@ download_with_progress() {
     
     echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Downloading ${BOLD}${filename}${RESET}..."
     
-    # Download in background and show spinner
-    curl -sL "$url" -o "$output" &
-    local curl_pid=$!
-    spinner $curl_pid
-    wait $curl_pid
-    local exit_code=$?
+    local download_pid
+    local exit_code
+
+    # Use the appropriate download method
+    if [[ "$url" == *"drive.google.com"* ]]; then
+        download_gdrive "$url" "$output" &
+    else
+        curl -sL "$url" -o "$output" &
+    fi
+    
+    download_pid=$!
+    spinner $download_pid
+    wait $download_pid
+    exit_code=$?
     
     if [ $exit_code -eq 0 ]; then
         echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
@@ -238,21 +265,19 @@ download_with_progress() {
     fi
 }
 
+
 install_app() {
     section_header "INSTALLATION PROCESS" "${ICON_INSTALL}"
     
-    # Check dependencies
     info_msg "Checking system dependencies..."
     check_dependencies
     echo -e "  ${GREEN}${ICON_SUCCESS} All dependencies found!${RESET}"
     echo
     
-    # Version selection
     version_menu
     read -n 1 ANSWER
     echo
     
-    # Default to stable if no asset URL is found
     ASSET_URL=""
     
     case "${ANSWER,,}" in
@@ -288,13 +313,11 @@ install_app() {
         error_exit "No downloadable assets found for the selected version!"
     fi
     
-    # Download
     echo
     if ! download_with_progress "$ASSET_URL" "/tmp/$APP_NAME.zip"; then
         error_exit "Download failed!"
     fi
     
-    # Installation
     echo
     info_msg "Installing to ${BOLD}$INSTALL_DIR${RESET}..."
     
@@ -306,6 +329,7 @@ install_app() {
     mkdir -p "$INSTALL_DIR"
     
     echo -ne "${CYAN}${ICON_INSTALL}${RESET} Extracting files..."
+    # UPDATED: Use -o to overwrite files without prompting
     if unzip -o "/tmp/$APP_NAME.zip" -d "$INSTALL_DIR" > /dev/null 2>&1; then
         echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
     else
@@ -313,7 +337,6 @@ install_app() {
         error_exit "Failed to extract application files!"
     fi
     
-    # Find executable
     APP_EXECUTABLE="$(find "$INSTALL_DIR" -type f -executable -print -quit)"
     if [ -z "$APP_EXECUTABLE" ]; then
         error_exit "No executable found in the extracted files!"
@@ -321,11 +344,9 @@ install_app() {
     
     chmod +x "$APP_EXECUTABLE"
     
-    # Create symlink
     mkdir -p "$HOME/.local/bin"
     ln -sf "$APP_EXECUTABLE" "$LINK"
     
-    # Install icon
     echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Installing icon..."
     mkdir -p "$(dirname "$ICON_FILE")"
     fallback_icon_url='https://raw.githubusercontent.com/grayankit/dartotsuInstall/main/Dartotsu.png'
@@ -335,7 +356,6 @@ install_app() {
         echo -e " ${YELLOW}${ICON_WARNING} Icon download failed (non-critical)${RESET}"
     fi
     
-    # Create desktop entry
     echo -ne "${CYAN}${ICON_INSTALL}${RESET} Creating desktop entry..."
     mkdir -p "$(dirname "$DESKTOP_FILE")"
     cat > "$DESKTOP_FILE" <<EOL
@@ -354,7 +374,6 @@ EOL
     fi
     echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
     
-    # Cleanup
     rm -f "/tmp/$APP_NAME.zip"
     
     echo
@@ -392,7 +411,6 @@ uninstall_app() {
     echo
     info_msg "Removing $APP_NAME components..."
     
-    # Remove components
     [ -L "$LINK" ] && rm -f "$LINK" && echo -e "  ${GREEN}✓${RESET} Executable symlink removed"
     [ -d "$INSTALL_DIR" ] && rm -rf "$INSTALL_DIR" && echo -e "  ${GREEN}✓${RESET} Installation directory removed"
     [ -f "$DESKTOP_FILE" ] && rm -f "$DESKTOP_FILE" && echo -e "  ${GREEN}✓${RESET} Desktop entry removed"
