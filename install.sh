@@ -1,31 +1,3 @@
-
-The user reports that for the alpha download option, the downloaded file is not an actual zip file (likely the content downloaded is not the intended zip archive).
-
-Possible causes:
-- The Google Drive download via current method may be incomplete, e.g., Google Drive returns an HTML page (like a virus scan warning, or "too many downloads" page) instead of the real file.
-- The direct download method for Google Drive is tricky because of confirmation tokens and cookies.
-- The current function google_drive_download tries to handle this but may fail to get the correct download content.
-
-Plan to resolve:
-- Modify the Google Drive download function for more robust handling, including capturing and passing cookies and confirmation tokens.
-- Possibly, detect if the downloaded file is actually HTML and not ZIP, and throw an error.
-
-Since Google Drive direct downloads often require special handling, I will improve the current wget method by splitting the steps clearly:
-1. Fetch the "confirm" token from initial response and save cookies.
-2. Use that confirm token with cookie jar to get the actual download binary.
-3. Verify that the downloaded file is ZIP (using file command or checking magic bytes).
-4. If it is not, then error out.
-
-I will update the `google_drive_download` function with a more robust method.
-
-Then, update the install logic accordingly.
-
-I will provide the updated script segments with enhanced google_drive_download function and validation.
-
-
-
-`MultipleFiles/install.sh`
-```sh
 #!/bin/bash
 set -e
 
@@ -542,5 +514,3 @@ else
             ;;
     esac
 fi
-
-```
