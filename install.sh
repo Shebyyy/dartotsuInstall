@@ -1,3 +1,31 @@
+
+The user reports that for the alpha download option, the downloaded file is not an actual zip file (likely the content downloaded is not the intended zip archive).
+
+Possible causes:
+- The Google Drive download via current method may be incomplete, e.g., Google Drive returns an HTML page (like a virus scan warning, or "too many downloads" page) instead of the real file.
+- The direct download method for Google Drive is tricky because of confirmation tokens and cookies.
+- The current function google_drive_download tries to handle this but may fail to get the correct download content.
+
+Plan to resolve:
+- Modify the Google Drive download function for more robust handling, including capturing and passing cookies and confirmation tokens.
+- Possibly, detect if the downloaded file is actually HTML and not ZIP, and throw an error.
+
+Since Google Drive direct downloads often require special handling, I will improve the current wget method by splitting the steps clearly:
+1. Fetch the "confirm" token from initial response and save cookies.
+2. Use that confirm token with cookie jar to get the actual download binary.
+3. Verify that the downloaded file is ZIP (using file command or checking magic bytes).
+4. If it is not, then error out.
+
+I will update the `google_drive_download` function with a more robust method.
+
+Then, update the install logic accordingly.
+
+I will provide the updated script segments with enhanced google_drive_download function and validation.
+
+
+
+`MultipleFiles/install.sh`
+```sh
 #!/bin/bash
 set -e
 
@@ -60,7 +88,6 @@ ICON_SPARKLES="✨"
 # 🎭 ANIMATION & UI FUNCTIONS
 # =============================================================================
 
-# Spinner animation
 spinner() {
     local pid=$1
     local delay=0.1
@@ -75,7 +102,6 @@ spinner() {
     printf "    \b\b\b\b"
 }
 
-# Progress bar
 progress_bar() {
     local current=$1
     local total=$2
@@ -90,7 +116,6 @@ progress_bar() {
     printf "] ${BOLD}%d%%${RESET}" $percentage
 }
 
-# Animated text typing effect
 type_text() {
     local text="$1"
     local delay=${2:-0.03}
@@ -101,7 +126,6 @@ type_text() {
     echo
 }
 
-# Cool banner
 show_banner() {
     clear
     echo
@@ -117,7 +141,6 @@ show_banner() {
     echo
 }
 
-# Stylized section headers
 section_header() {
     local title="$1"
     local icon="$2"
@@ -128,7 +151,6 @@ section_header() {
     echo
 }
 
-# Success message with animation
 success_msg() {
     local msg="$1"
     echo
@@ -138,7 +160,6 @@ success_msg() {
     echo
 }
 
-# Error message
 error_msg() {
     local msg="$1"
     echo
@@ -148,19 +169,16 @@ error_msg() {
     echo
 }
 
-# Info message
 info_msg() {
     local msg="$1"
     echo -e "${CYAN}${ICON_INFO}${RESET} ${msg}"
 }
 
-# Warning message
 warn_msg() {
     local msg="$1"
     echo -e "${YELLOW}${ICON_WARNING}${RESET} ${msg}"
 }
 
-# Stylized menu
 show_menu() {
     echo -e "${BOLD}${PURPLE}┌─ SELECT ACTION ────────────────────────────────────┐${RESET}"
     echo -e "${BOLD}${PURPLE}│${RESET}                                                   ${PURPLE}${BOLD}│${RESET}"
@@ -174,7 +192,6 @@ show_menu() {
     echo -ne "${BOLD}${WHITE}Your choice${RESET} ${GRAY}(I/U/R/Q)${RESET}: "
 }
 
-# Version selection menu with alpha added
 version_menu() {
     echo
     echo -e "${BOLD}${CYAN}┌─ VERSION SELECTION ────────────────────────────────┐${RESET}"
@@ -187,10 +204,6 @@ version_menu() {
     echo
     echo -ne "${BOLD}${WHITE}Your choice${RESET} ${GRAY}(S/P/A)${RESET}: "
 }
-
-# =============================================================================
-# 🛠️  CORE FUNCTIONS
-# =============================================================================
 
 error_exit() {
     error_msg "$1"
@@ -218,7 +231,6 @@ download_with_progress() {
     
     echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Downloading ${BOLD}${filename}${RESET}..."
     
-    # Download in background and show spinner
     curl -sL "$url" -o "$output" &
     local curl_pid=$!
     spinner $curl_pid
@@ -233,63 +245,61 @@ download_with_progress() {
     fi
 }
 
-# New function to download from Google Drive given File ID (handling confirm & cookies)
 google_drive_download() {
     local file_id="$1"
     local destination="$2"
 
-    # Using method to handle google drive large file download confirmation
-    # This is a simplified approach that works for many files but may fail for very large files.
     echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Downloading from Google Drive file ID ${BOLD}$file_id${RESET}..."
 
-    # Initial request to get confirm token
-    CONFIRM=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate \
+    # Step1: Get confirmation token & cookies
+    local CONFIRM=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate \
         "https://docs.google.com/uc?export=download&id=${file_id}" -O - | \
-        sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1/p')
+        grep -Po 'confirm=([0-9A-Za-z_]+)' | head -1 | sed 's/confirm=//')
 
-    if [ -n "$CONFIRM" ]; then
-      wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=${CONFIRM}&id=${file_id}" \
-          -O "$destination" --no-check-certificate --quiet
+    if [ -z "$CONFIRM" ]; then
+      # No confirm token, small file probably
+      wget --no-check-certificate -q "https://docs.google.com/uc?export=download&id=${file_id}" -O "$destination"
       local exit_code=$?
-      rm -f /tmp/cookies.txt
-      if [ $exit_code -eq 0 ]; then
-          echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
-          return 0
-      else
+      if [ $exit_code -ne 0 ]; then
           echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
           return 1
       fi
     else
-      # No confirm token needed (small files)
-      wget --no-check-certificate -q "https://docs.google.com/uc?export=download&id=${file_id}" -O "$destination"
+      # Use confirm token cookie to download
+      wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=${CONFIRM}&id=${file_id}" \
+            -O "$destination" --no-check-certificate -q
       local exit_code=$?
-      if [ $exit_code -eq 0 ]; then
-          echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
-          return 0
-      else
+      rm -f /tmp/cookies.txt
+      if [ $exit_code -ne 0 ]; then
           echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
           return 1
       fi
     fi
+
+    # Verify file magic bytes (PK zip signature)
+    if ! head -c 4 "$destination" | grep -q "PK"; then
+      echo -e " ${RED}${ICON_ERROR} Downloaded file is not a ZIP archive!${RESET}"
+      return 1
+    fi
+
+    echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
+    return 0
 }
 
 install_app() {
     section_header "INSTALLATION PROCESS" "${ICON_INSTALL}"
     
-    # Check dependencies
     info_msg "Checking system dependencies..."
     check_dependencies
     echo -e "  ${GREEN}${ICON_SUCCESS} All dependencies found!${RESET}"
     echo
     
-    # Version selection
     version_menu
     read -n 1 ANSWER
     echo
     
     case "${ANSWER,,}" in
         a)
-            # Alpha install using file ID and Google Drive download
             info_msg "Fetching File ID for alpha download..."
             FILE_ID="$(curl -s "$FILE_ID_FILE")"
             if [ -z "$FILE_ID" ]; then
@@ -298,13 +308,12 @@ install_app() {
             info_msg "Downloading alpha version from Google Drive..."
             TMP_ZIP="/tmp/${APP_NAME}_alpha.zip"
             if ! google_drive_download "$FILE_ID" "$TMP_ZIP"; then
-                error_exit "Alpha download failed!"
+                error_exit "Alpha download failed or the downloaded file is invalid!"
             fi
             ;;
         p)
             API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
             info_msg "Fetching pre-release versions..."
-            # Find first pre-release download URL
             ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
             if [ -z "$ASSET_URL" ]; then
                 error_exit "No downloadable assets found in the pre-release versions!"
@@ -343,7 +352,6 @@ install_app() {
             ;;
     esac
 
-    # Installation
     echo
     info_msg "Installing to ${BOLD}$INSTALL_DIR${RESET}..."
 
@@ -362,7 +370,6 @@ install_app() {
         error_exit "Failed to extract application files!"
     fi
 
-    # Find executable
     APP_EXECUTABLE="$(find "$INSTALL_DIR" -type f -executable -print -quit)"
     if [ -z "$APP_EXECUTABLE" ]; then
         error_exit "No executable found in the extracted files!"
@@ -370,11 +377,9 @@ install_app() {
 
     chmod +x "$APP_EXECUTABLE"
 
-    # Create symlink
     mkdir -p "$HOME/.local/bin"
     ln -sf "$APP_EXECUTABLE" "$LINK"
 
-    # Install icon
     echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Installing icon..."
     mkdir -p "$(dirname "$ICON_FILE")"
     fallback_icon_url='https://raw.githubusercontent.com/grayankit/dartotsuInstall/main/Dartotsu.png'
@@ -384,7 +389,6 @@ install_app() {
         echo -e " ${YELLOW}${ICON_WARNING} Icon download failed (non-critical)${RESET}"
     fi
 
-    # Create desktop entry
     echo -ne "${CYAN}${ICON_INSTALL}${RESET} Creating desktop entry..."
     mkdir -p "$(dirname "$DESKTOP_FILE")"
     cat > "$DESKTOP_FILE" <<EOL
@@ -403,7 +407,6 @@ EOL
     fi
     echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
 
-    # Cleanup
     rm -f "$TMP_ZIP"
 
     echo
@@ -441,7 +444,6 @@ uninstall_app() {
     echo
     info_msg "Removing $APP_NAME components..."
     
-    # Remove components
     [ -L "$LINK" ] && rm -f "$LINK" && echo -e "  ${GREEN}✓${RESET} Executable symlink removed"
     [ -d "$INSTALL_DIR" ] && rm -rf "$INSTALL_DIR" && echo -e "  ${GREEN}✓${RESET} Installation directory removed"
     [ -f "$DESKTOP_FILE" ] && rm -f "$DESKTOP_FILE" && echo -e "  ${GREEN}✓${RESET} Desktop entry removed"
@@ -482,10 +484,6 @@ update_app() {
     install_app
 }
 
-# =============================================================================
-# 🚀 MAIN SCRIPT
-# =============================================================================
-
 main_loop() {
     while true; do
         show_banner
@@ -519,11 +517,9 @@ main_loop() {
     done
 }
 
-# Check if running in interactive mode
 if [ -t 0 ]; then
     main_loop
 else
-    # Non-interactive mode - handle command line arguments
     ACTION="$1"
     case "${ACTION,,}" in
         install)
@@ -546,3 +542,5 @@ else
             ;;
     esac
 fi
+
+```
