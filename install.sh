@@ -34,12 +34,12 @@ DIM='\033[2m'
 RESET='\033[0m'
 
 # Gradient colors
-GRAD1='\033[38;5;198m'  # Hot pink
-GRAD2='\033[38;5;199m'  # Pink
-GRAD3='\033[38;5;200m'  # Light pink
-GRAD4='\033[38;5;135m'  # Purple
-GRAD5='\033[38;5;99m'   # Dark purple
-GRAD6='\033[38;5;63m'   # Blue purple
+GRAD1='\033[38;5;198m' # Hot pink
+GRAD2='\033[38;5;199m' # Pink
+GRAD3='\033[38;5;200m' # Light pink
+GRAD4='\033[38;5;135m' # Purple
+GRAD5='\033[38;5;99m'  # Dark purple
+GRAD6='\033[38;5;63m'  # Blue purple
 
 # Icons
 ICON_SUCCESS="✅"
@@ -77,7 +77,7 @@ spinner() {
 type_text() {
     local text="$1"
     local delay=${2:-0.03}
-    for ((i=0; i<${#text}; i++)); do
+    for ((i = 0; i < ${#text}; i++)); do
         printf "${text:$i:1}"
         sleep $delay
     done
@@ -184,51 +184,58 @@ error_exit() {
 
 check_dependencies() {
     local missing_deps=()
-    
+
     command -v curl >/dev/null 2>&1 || missing_deps+=("curl")
     command -v unzip >/dev/null 2>&1 || missing_deps+=("unzip")
     command -v wget >/dev/null 2>&1 || missing_deps+=("wget")
-    
+
     if [ ${#missing_deps[@]} -ne 0 ]; then
         error_exit "Missing dependencies: ${missing_deps[*]}. Please install them first."
     fi
 }
 
-# NEW: Dedicated function for Google Drive downloads
+# NEW (Robust Version): Dedicated function for Google Drive downloads
 download_gdrive() {
-    local url="$1"
+    local file_id="$1"
     local output_file="$2"
-    local file_id
-    file_id=$(echo "${url}" | sed -r 's/.*id=([^&]+).*/\1/')
     local cookies_file="/tmp/gdrive-cookies.txt"
+    local temp_download="/tmp/gdrive-initial-download.html"
 
-    # Step 1: Get the confirmation token & cookie
-    local response
-    response=$(wget --quiet --save-cookies "$cookies_file" --keep-session-cookies --no-check-certificate "https://docs.google.com/uc?export=download&id=${file_id}" -O- 2>&1)
-    
+    # Step 1: Make the initial request and save cookies. Also save the output, which is either
+    # a confirmation page (for large files) or the actual file (for small files).
+    wget --quiet --save-cookies "$cookies_file" --keep-session-cookies --no-check-certificate \
+        "https://docs.google.com/uc?export=download&id=${file_id}" -O "$temp_download"
+
+    # Step 2: Check the saved output for a confirmation token.
+    # The token is usually in a form with name 'confirm' and a value.
     local confirm_token
-    confirm_token=$(echo "$response" | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')
-    
-    # Step 2: Download the actual file with the cookie and token
+    confirm_token=$(grep -oP 'confirm=([0-9A-Za-z_]+)' "$temp_download" | sed 's/confirm=//')
+
+    # Step 3: If a confirmation token is found, it's a large file.
+    # Make a second request with the confirmation token and saved cookies.
     if [ -n "$confirm_token" ]; then
-        wget --quiet --load-cookies "$cookies_file" -O "$output_file" "https://docs.google.com/uc?export=download&confirm=${confirm_token}&id=${file_id}"
+        wget --quiet --load-cookies "$cookies_file" -O "$output_file" \
+            "https://docs.google.com/uc?export=download&confirm=${confirm_token}&id=${file_id}"
     else
-        # If no token is needed (for small files), the first response is the file itself
-        echo "$response" > "$output_file"
+        # If no token is found, the initial download was the actual file.
+        mv "$temp_download" "$output_file"
     fi
-    
+
+    # Cleanup temporary files
     rm -f "$cookies_file"
+    # The temp_download file is either moved or no longer needed
+    [ -f "$temp_download" ] && rm -f "$temp_download"
     
-    # Verify if the downloaded file is a zip file, not an HTML page
+    # Final verification: Check if the result is a valid zip file, not an error page.
     if ! file "$output_file" | grep -q "Zip archive data"; then
+        error_msg "G-Drive download failed. The result was not a valid zip file."
         return 1 # Return failure
     fi
-    
+
     return 0 # Return success
 }
 
-
-# UPDATED: Handles both regular and GDrive downloads
+# Handles both regular and GDrive downloads
 download_with_progress() {
     local url="$1"
     local output="$2"
@@ -239,24 +246,26 @@ download_with_progress() {
     else
         filename=$(basename "$url")
     fi
-    
+
     echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Downloading ${BOLD}${filename}${RESET}..."
-    
+
     local download_pid
     local exit_code
 
-    # Use the appropriate download method
+    # Use the appropriate download method and run it in the background
     if [[ "$url" == *"drive.google.com"* ]]; then
-        download_gdrive "$url" "$output" &
+        local file_id
+        file_id=$(echo "${url}" | sed -r 's/.*id=([^&]+).*/\1/')
+        download_gdrive "$file_id" "$output" &
     else
         curl -sL "$url" -o "$output" &
     fi
-    
+
     download_pid=$!
     spinner $download_pid
     wait $download_pid
     exit_code=$?
-    
+
     if [ $exit_code -eq 0 ]; then
         echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
     else
@@ -265,88 +274,87 @@ download_with_progress() {
     fi
 }
 
-
 install_app() {
     section_header "INSTALLATION PROCESS" "${ICON_INSTALL}"
-    
+
     info_msg "Checking system dependencies..."
     check_dependencies
     echo -e "  ${GREEN}${ICON_SUCCESS} All dependencies found!${RESET}"
     echo
-    
+
     version_menu
     read -n 1 ANSWER
     echo
-    
+
     ASSET_URL=""
-    
+
     case "${ANSWER,,}" in
-        p)
-            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
-            info_msg "Fetching pre-release versions..."
-            ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
-            ;;
-        a)
-            info_msg "Fetching alpha build info..."
-            local FILE_ID_FILE='https://raw.githubusercontent.com/aayush2622/Dartotsu/main/scripts/latest.txt'
-            local FILE_ID
-            FILE_ID="$(curl -s "$FILE_ID_FILE")"
-            if [ -z "$FILE_ID" ]; then
-                error_exit "Failed to retrieve File ID from $FILE_ID_FILE"
-            fi
-            info_msg "Found Alpha build with File ID: ${BOLD}${FILE_ID}${RESET}"
-            ASSET_URL="https://drive.google.com/uc?export=download&id=${FILE_ID}"
-            ;;
-        s|"")
-            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-            info_msg "Fetching stable release..."
-            ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
-            ;;
-        *)
-            warn_msg "Invalid selection, defaulting to stable release..."
-            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-            ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
-            ;;
+    p)
+        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
+        info_msg "Fetching pre-release versions..."
+        ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
+        ;;
+    a)
+        info_msg "Fetching alpha build info..."
+        local FILE_ID_FILE='https://raw.githubusercontent.com/aayush2622/Dartotsu/main/scripts/latest.txt'
+        local FILE_ID
+        FILE_ID="$(curl -s "$FILE_ID_FILE")"
+        if [ -z "$FILE_ID" ]; then
+            error_exit "Failed to retrieve File ID from $FILE_ID_FILE"
+        fi
+        info_msg "Found Alpha build with File ID: ${BOLD}${FILE_ID}${RESET}"
+        ASSET_URL="https://drive.google.com/uc?export=download&id=${FILE_ID}"
+        ;;
+    s | "")
+        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+        info_msg "Fetching stable release..."
+        ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
+        ;;
+    *)
+        warn_msg "Invalid selection, defaulting to stable release..."
+        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+        ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
+        ;;
     esac
-    
+
     if [ -z "$ASSET_URL" ]; then
         error_exit "No downloadable assets found for the selected version!"
     fi
-    
+
     echo
     if ! download_with_progress "$ASSET_URL" "/tmp/$APP_NAME.zip"; then
         error_exit "Download failed!"
     fi
-    
+
     echo
     info_msg "Installing to ${BOLD}$INSTALL_DIR${RESET}..."
-    
+
     if [ -d "$INSTALL_DIR" ]; then
         warn_msg "Existing installation detected - removing old version..."
         rm -rf "$INSTALL_DIR"
     fi
-    
+
     mkdir -p "$INSTALL_DIR"
-    
+
     echo -ne "${CYAN}${ICON_INSTALL}${RESET} Extracting files..."
-    # UPDATED: Use -o to overwrite files without prompting
-    if unzip -o "/tmp/$APP_NAME.zip" -d "$INSTALL_DIR" > /dev/null 2>&1; then
+    # Use -o to overwrite files without prompting
+    if unzip -o "/tmp/$APP_NAME.zip" -d "$INSTALL_DIR" >/dev/null 2>&1; then
         echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
     else
         echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
         error_exit "Failed to extract application files!"
     fi
-    
+
     APP_EXECUTABLE="$(find "$INSTALL_DIR" -type f -executable -print -quit)"
     if [ -z "$APP_EXECUTABLE" ]; then
         error_exit "No executable found in the extracted files!"
     fi
-    
+
     chmod +x "$APP_EXECUTABLE"
-    
+
     mkdir -p "$HOME/.local/bin"
     ln -sf "$APP_EXECUTABLE" "$LINK"
-    
+
     echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Installing icon..."
     mkdir -p "$(dirname "$ICON_FILE")"
     fallback_icon_url='https://raw.githubusercontent.com/grayankit/dartotsuInstall/main/Dartotsu.png'
@@ -355,10 +363,10 @@ install_app() {
     else
         echo -e " ${YELLOW}${ICON_WARNING} Icon download failed (non-critical)${RESET}"
     fi
-    
+
     echo -ne "${CYAN}${ICON_INSTALL}${RESET} Creating desktop entry..."
     mkdir -p "$(dirname "$DESKTOP_FILE")"
-    cat > "$DESKTOP_FILE" <<EOL
+    cat >"$DESKTOP_FILE" <<EOL
 [Desktop Entry]
 Name=$APP_NAME
 Comment=The Ultimate Anime & Manga Experience
@@ -368,18 +376,18 @@ Type=Application
 Categories=AudioVideo;Player;
 EOL
     chmod +x "$DESKTOP_FILE"
-    
+
     if command -v update-desktop-database >/dev/null 2>&1; then
         update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
     fi
     echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
-    
+
     rm -f "/tmp/$APP_NAME.zip"
-    
+
     echo
     success_msg "$APP_NAME has been installed successfully!"
     info_msg "You can now launch it from your applications menu or run: ${BOLD}$APP_NAME${RESET}"
-    
+
     echo
     echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
     read -n 1
@@ -387,7 +395,7 @@ EOL
 
 uninstall_app() {
     section_header "UNINSTALLATION PROCESS" "${ICON_UNINSTALL}"
-    
+
     if [ ! -d "$INSTALL_DIR" ] && [ ! -L "$LINK" ]; then
         warn_msg "$APP_NAME doesn't appear to be installed!"
         echo
@@ -395,11 +403,11 @@ uninstall_app() {
         read -n 1
         return
     fi
-    
+
     echo -e "${YELLOW}${BOLD}Are you sure you want to remove $APP_NAME?${RESET} ${GRAY}(y/N)${RESET}: "
     read -n 1 CONFIRM
     echo
-    
+
     if [[ "${CONFIRM,,}" != "y" ]]; then
         info_msg "Uninstallation cancelled."
         echo
@@ -407,22 +415,22 @@ uninstall_app() {
         read -n 1
         return
     fi
-    
+
     echo
     info_msg "Removing $APP_NAME components..."
-    
+
     [ -L "$LINK" ] && rm -f "$LINK" && echo -e "  ${GREEN}✓${RESET} Executable symlink removed"
     [ -d "$INSTALL_DIR" ] && rm -rf "$INSTALL_DIR" && echo -e "  ${GREEN}✓${RESET} Installation directory removed"
     [ -f "$DESKTOP_FILE" ] && rm -f "$DESKTOP_FILE" && echo -e "  ${GREEN}✓${RESET} Desktop entry removed"
     [ -f "$ICON_FILE" ] && rm -f "$ICON_FILE" && echo -e "  ${GREEN}✓${RESET} Icon removed"
-    
+
     if command -v update-desktop-database >/dev/null 2>&1; then
         update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
     fi
-    
+
     echo
     success_msg "$APP_NAME has been completely removed!"
-    
+
     echo
     echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
     read -n 1
@@ -430,13 +438,13 @@ uninstall_app() {
 
 update_app() {
     section_header "UPDATE PROCESS" "${ICON_UPDATE}"
-    
+
     if [ ! -d "$INSTALL_DIR" ] && [ ! -L "$LINK" ]; then
         warn_msg "$APP_NAME doesn't appear to be installed!"
         info_msg "Would you like to install it instead? ${GRAY}(y/N)${RESET}: "
         read -n 1 INSTALL_INSTEAD
         echo
-        
+
         if [[ "${INSTALL_INSTEAD,,}" == "y" ]]; then
             install_app
         else
@@ -445,7 +453,7 @@ update_app() {
         fi
         return
     fi
-    
+
     info_msg "Updating $APP_NAME to the latest version..."
     echo
     install_app
@@ -461,29 +469,29 @@ main_loop() {
         show_menu
         read -n 1 ACTION
         echo
-        
+
         case "${ACTION,,}" in
-            i|install)
-                install_app
-                ;;
-            u|update)
-                update_app
-                ;;
-            r|remove|uninstall)
-                uninstall_app
-                ;;
-            q|quit|exit)
-                echo
-                type_text "Thanks for using Dartotsu Installer! ${ICON_SPARKLES}" 0.05
-                echo -e "${GRAY}${DIM}Goodbye!${RESET}"
-                exit 0
-                ;;
-            *)
-                echo
-                warn_msg "Invalid selection! Please choose I, U, R, or Q."
-                echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
-                read -n 1
-                ;;
+        i | install)
+            install_app
+            ;;
+        u | update)
+            update_app
+            ;;
+        r | remove | uninstall)
+            uninstall_app
+            ;;
+        q | quit | exit)
+            echo
+            type_text "Thanks for using Dartotsu Installer! ${ICON_SPARKLES}" 0.05
+            echo -e "${GRAY}${DIM}Goodbye!${RESET}"
+            exit 0
+            ;;
+        *)
+            echo
+            warn_msg "Invalid selection! Please choose I, U, R, or Q."
+            echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
+            read -n 1
+            ;;
         esac
     done
 }
@@ -495,23 +503,23 @@ else
     # Non-interactive mode - handle command line arguments
     ACTION="$1"
     case "${ACTION,,}" in
-        install)
-            show_banner
-            install_app
-            ;;
-        update)
-            show_banner
-            update_app
-            ;;
-        uninstall|remove)
-            show_banner
-            uninstall_app
-            ;;
-        *)
-            show_banner
-            echo -e "${RED}Usage: $0 [install|update|uninstall]${RESET}"
-            echo -e "${GRAY}Or run without arguments for interactive mode.${RESET}"
-            exit 1
-            ;;
+    install)
+        show_banner
+        install_app
+        ;;
+    update)
+        show_banner
+        update_app
+        ;;
+    uninstall | remove)
+        show_banner
+        uninstall_app
+        ;;
+    *)
+        show_banner
+        echo -e "${RED}Usage: $0 [install|update|uninstall]${RESET}"
+        echo -e "${GRAY}Or run without arguments for interactive mode.${RESET}"
+        exit 1
+        ;;
     esac
 fi
