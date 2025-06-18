@@ -223,17 +223,51 @@ download_with_progress() {
     
     echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Downloading ${BOLD}${filename}${RESET}..."
     
-    # Download in background and show spinner
-    curl -sL "$url" -o "$output" &
-    local curl_pid=$!
-    spinner $curl_pid
-    wait $curl_pid
-    local exit_code=$?
-    
-    if [ $exit_code -eq 0 ]; then
-        echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
+    # Special handling for Google Drive downloads
+    if [[ "$url" == *"drive.google.com"* ]]; then
+        # First attempt direct download
+        curl -sL "$url" -o "$output" &
+        local curl_pid=$!
+        spinner $curl_pid
+        wait $curl_pid
+        
+        # Check if we got HTML (confirmation page) instead of zip file
+        if file "$output" | grep -q "HTML"; then
+            echo -e " ${YELLOW}${ICON_WARNING} Confirmation required${RESET}"
+            echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Retrying with confirmation bypass..."
+            
+            # Extract file ID and use alternative download method
+            local file_id=$(echo "$url" | sed -n 's/.*id=\([^&]*\).*/\1/p')
+            local confirm_url="https://drive.google.com/uc?export=download&confirm=1&id=${file_id}"
+            
+            # Get the confirmation token
+            local confirm_token=$(curl -sc /tmp/gcookie "$url" | grep -o 'confirm=[^&]*' | head -1)
+            if [ -n "$confirm_token" ]; then
+                curl -sL -b /tmp/gcookie "${confirm_url}&${confirm_token}" -o "$output" &
+            else
+                # Fallback method using wget
+                wget --no-check-certificate --load-cookies /tmp/gcookie "https://drive.google.com/uc?export=download&confirm=1&id=${file_id}" -O "$output" > /dev/null 2>&1 &
+            fi
+            
+            local retry_pid=$!
+            spinner $retry_pid
+            wait $retry_pid
+            rm -f /tmp/gcookie
+        fi
     else
-        echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
+        # Regular download for non-Google Drive URLs
+        curl -sL "$url" -o "$output" &
+        local curl_pid=$!
+        spinner $curl_pid
+        wait $curl_pid
+    fi
+    
+    # Verify the downloaded file is a valid zip
+    if [ -f "$output" ] && file "$output" | grep -q -i "zip\|archive"; then
+        echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
+        return 0
+    else
+        echo -e " ${RED}${ICON_ERROR} Download verification failed!${RESET}"
         return 1
     fi
 }
@@ -271,6 +305,7 @@ install_app() {
                 error_exit "Failed to retrieve File ID from $FILE_ID_FILE"
             fi
             info_msg "Found Alpha build with File ID: ${BOLD}${FILE_ID}${RESET}"
+            # Use the more reliable Google Drive download URL format
             ASSET_URL="https://drive.google.com/uc?export=download&id=${FILE_ID}"
             DOWNLOAD_FILENAME="$APP_NAME-alpha.zip"
             ;;
@@ -308,10 +343,20 @@ install_app() {
     mkdir -p "$INSTALL_DIR"
     
     echo -ne "${CYAN}${ICON_INSTALL}${RESET} Extracting files..."
+    
+    # Verify the zip file before extraction
+    if ! unzip -t "/tmp/$DOWNLOAD_FILENAME" > /dev/null 2>&1; then
+        echo -e " ${RED}${ICON_ERROR} Invalid zip file!${RESET}"
+        info_msg "File info: $(file "/tmp/$DOWNLOAD_FILENAME")"
+        error_exit "Downloaded file is corrupted or not a valid zip archive!"
+    fi
+    
     if unzip -o "/tmp/$DOWNLOAD_FILENAME" -d "$INSTALL_DIR" > /dev/null 2>&1; then
         echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
     else
         echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
+        info_msg "Zip file contents:"
+        unzip -l "/tmp/$DOWNLOAD_FILENAME" 2>/dev/null || echo "  Unable to list zip contents"
         error_exit "Failed to extract application files!"
     fi
     
