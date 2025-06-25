@@ -255,7 +255,7 @@ warn_msg() {
 # Stylized menu
 show_menu() {
     # Glitch effect
-    echo -e "${RED}█${PURPLE}█${CYAN}█${YELLOW}█${GREEN}█${BLUE}█${RESET} ${BOLD}DARTOTSU CONTROL PANEL${RESET} ${BLUE}█${GREEN}█${YELLOW}█${CYAN}█${PURPLE}█${RED}█${RESET}"
+    echo -e "${GRAD1}█${GRAD2}█${GRAD3}█${GRAD4}█${GRAD5}█${GRAD6}█${RESET} ${BOLD}DARTOTSU CONTROL PANEL${RESET} ${GRAD6}█${GRAD5}█${GRAD4}█${GRAD3}█${GRAD2}█${GRAD1}█${RESET}"
     echo
     echo -e "${BOLD}${CYAN}╔═══════════════════════════════════════════════════════╗${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
