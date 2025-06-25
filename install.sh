@@ -304,6 +304,39 @@ version_menu() {
 }
 
 # =============================================================================
+# 🐚 SHELL ALIAS MANAGEMENT
+# =============================================================================
+
+detect_shell_rc() {
+  local shell_name
+  shell_name=$(basename "$SHELL")
+  case "$shell_name" in
+    bash) echo "$HOME/.bashrc" ;;
+    zsh) echo "$HOME/.zshrc" ;;
+    fish) echo "$HOME/.config/fish/config.fish" ;; 
+    *) echo "$HOME/.profile" ;; 
+  esac
+}
+
+add_updater_alias() {
+  local shell_rc
+  shell_rc=$(detect_shell_rc)
+  local alias_line="alias dartotsu-updater='bash <(curl -s https://raw.githubusercontent.com/aayush2622/Dartotsu/main/scripts/install.sh)'"
+  
+  echo -ne "${CYAN}${ICON_MAGIC}${RESET} Creating shell alias..."
+  
+  if ! grep -Fxq "$alias_line" "$shell_rc" 2>/dev/null; then
+    echo "$alias_line" >> "$shell_rc"
+    echo -e " ${GREEN}${ICON_SUCCESS} Added to $(basename "$shell_rc")${RESET}"
+    info_msg "You can now run '${BOLD}dartotsu-updater${RESET}' to update anytime!"
+    info_msg "Run '${BOLD}source $shell_rc${RESET}' or restart your terminal to activate the alias"
+  else
+    echo -e " ${YELLOW}${ICON_WARNING} Already exists in $(basename "$shell_rc")${RESET}"
+  fi
+}
+
+
+# =============================================================================
 # 🛠️ ENHANCED DEPENDENCY MANAGEMENT
 # =============================================================================
 
@@ -321,6 +354,7 @@ check_dependencies() {
     command -v curl >/dev/null 2>&1 || missing_deps+=("curl")
     command -v unzip >/dev/null 2>&1 || missing_deps+=("unzip")
     command -v wget >/dev/null 2>&1 || missing_deps+=("wget")
+    command -v mpv >/dev/null 2>&1 || missing_deps+=("mpv")
     
     # Check optional tools
     command -v git >/dev/null 2>&1 || optional_deps+=("git")
@@ -329,7 +363,7 @@ check_dependencies() {
     if command -v pkg-config >/dev/null 2>&1; then
         # Check for WebKit2GTK with fallback to older version
         if ! pkg-config --exists webkit2gtk-4.1 2>/dev/null; then
-            if ! pkg-config --exists webkit2gtk-3.0 2>/dev/null; then
+            if ! pkg-config --exists webkit2gtk-4.1-0 2>/dev/null; then
                 missing_deps+=("webkit2gtk")
             fi
         fi
@@ -386,7 +420,7 @@ install_packages() {
         install_cmd="sudo apt install -y"
         
         # Map library names to Ubuntu/Debian package names
-        deps=("${deps[@]/webkit2gtk/libwebkit2gtk-4.1-dev}")
+        deps=("${deps[@]/webkit2gtk/libwebkit2gtk-4.1-0}")
         deps=("${deps[@]/gtk3/libgtk-3-dev}")
         deps=("${deps[@]/pkg-config/pkg-config}")
         
@@ -395,7 +429,7 @@ install_packages() {
         install_cmd="sudo dnf install -y"
         
         # Map library names to Fedora package names
-        deps=("${deps[@]/webkit2gtk/webkit2gtk4.1-devel}")
+        deps=("${deps[@]/webkit2gtk/webkit2gtk4.1-0}")
         deps=("${deps[@]/gtk3/gtk3-devel}")
         deps=("${deps[@]/pkg-config/pkgconf-devel}")
         
@@ -654,6 +688,9 @@ EOL
         update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
     fi
     echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
+
+    # Create shell alias for easy updates
+    add_updater_alias
     
     # Cleanup
     rm -f "/tmp/$APP_NAME.zip"
@@ -732,6 +769,9 @@ update_app() {
     info_msg "Updating $APP_NAME to the latest version..."
     echo
     install_app
+    
+    # Ensure alias is still present after update
+    add_updater_alias
 }
 
 # =============================================================================
