@@ -831,9 +831,7 @@ main_loop() {
 }
 
 # Check if running in interactive mode
-if [ -t 0 ]; then
-    main_loop
-else
+if [ $# -gt 0 ]; then
     # Non-interactive mode - handle command line arguments
     ACTION="$1"
     case "${ACTION,,}" in
@@ -856,4 +854,10 @@ else
             exit 1
             ;;
     esac
+elif [ -t 0 ]; then
+    # Interactive mode - show menu
+    main_loop
+else
+    # Fallback to interactive mode
+    main_loop
 fi
