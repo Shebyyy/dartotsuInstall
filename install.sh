@@ -303,6 +303,39 @@ version_menu() {
     echo -ne "${BOLD}${WHITE}Choose your destiny${RESET} ${GRAY}(S/P/A)${RESET} ${ICON_MAGIC}: "
 }
 
+go_back_menu() {
+    echo
+    echo -e "${BOLD}${CYAN}╭─────────────────────────────────────────────╮${RESET}"
+    echo -e "${BOLD}${CYAN}│${RESET}                                           ${CYAN}${BOLD}│${RESET}"
+    echo -e "${BOLD}${CYAN}│${RESET}  ${ICON_MAGIC} ${GREEN}${BOLD}[M]${RESET} Main Menu ${GRAY}(Return to Control Panel)${RESET} ${CYAN}${BOLD}│${RESET}"
+    echo -e "${BOLD}${CYAN}│${RESET}  ${ICON_GHOST} ${RED}${BOLD}[Q]${RESET} Quit ${GRAY}(Exit Application)${RESET}        ${CYAN}${BOLD}│${RESET}"
+    echo -e "${BOLD}${CYAN}│${RESET}                                           ${CYAN}${BOLD}│${RESET}"
+    echo -e "${BOLD}${CYAN}╰─────────────────────────────────────────────╯${RESET}"
+    echo
+    echo -ne "${BOLD}${WHITE}What's next?${RESET} ${GRAY}(M/Q)${RESET} ${ICON_MAGIC}: "
+    
+    read -n 1 NEXT_ACTION
+    echo
+    
+    case "${NEXT_ACTION,,}" in
+        m|menu)
+            return 0  # Go back to main menu
+            ;;
+        q|quit|exit)
+            echo
+            type_text "Thanks for using Dartotsu Installer! ${ICON_SPARKLES}" 0.05
+            echo -e "${GRAY}${DIM}Goodbye!${RESET}"
+            exit 0
+            ;;
+        *)
+            echo
+            warn_msg "Invalid selection! Returning to main menu..."
+            sleep 1
+            return 0
+            ;;
+    esac
+}
+
 # =============================================================================
 # 🐚 SHELL ALIAS MANAGEMENT
 # =============================================================================
@@ -718,20 +751,16 @@ EOL
     success_msg "$APP_NAME has been installed successfully!"
     info_msg "You can now launch it from your applications menu or run: ${BOLD}$APP_NAME${RESET}"
     
-    echo
-    echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
-    read -n 1
+    go_back_menu
 }
 
 uninstall_app() {
     section_header "UNINSTALLATION PROCESS" "${ICON_UNINSTALL}"
     
     if [ ! -d "$INSTALL_DIR" ] && [ ! -L "$LINK" ]; then
-        warn_msg "$APP_NAME doesn't appear to be installed!"
-        echo
-        echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
-        read -n 1
-        return
+    warn_msg "$APP_NAME doesn't appear to be installed!"
+    go_back_menu
+    return
     fi
     
     echo -e "${YELLOW}${BOLD}Are you sure you want to remove $APP_NAME?${RESET} ${GRAY}(y/N)${RESET}: "
@@ -739,11 +768,9 @@ uninstall_app() {
     echo
     
     if [[ "${CONFIRM,,}" != "y" ]]; then
-        info_msg "Uninstallation cancelled."
-        echo
-        echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
-        read -n 1
-        return
+    info_msg "Uninstallation cancelled."
+    go_back_menu
+    return
     fi
     
     echo
@@ -779,8 +806,7 @@ update_app() {
         if [[ "${INSTALL_INSTEAD,,}" == "y" ]]; then
             install_app
         else
-            echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
-            read -n 1
+            go_back_menu
         fi
         return
     fi
