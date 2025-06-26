@@ -60,6 +60,20 @@ ICON_COMET="☄️"
 ICON_GALAXY="🌌"
 
 # =============================================================================
+# 🎵 SOUND EFFECTS
+# =============================================================================
+play_sound() {
+    local sound_type="$1"
+    if command -v paplay >/dev/null 2>&1; then
+        case "$sound_type" in
+            "success") echo -e "\a" ;;
+            "error") for i in {1..3}; do echo -e "\a"; sleep 0.1; done ;;
+            "notification") echo -e "\a" ;;
+        esac
+    fi
+}
+
+# =============================================================================
 # 🎭 ANIMATION & UI FUNCTIONS
 # =============================================================================
 
@@ -76,6 +90,50 @@ spinner() {
         printf "\b\b\b\b\b\b"
     done
     printf "    \b\b\b\b"
+}
+
+matrix_loading() {
+    local duration=${1:-3}
+    local chars="01"
+    local colors=("${GREEN}" "${CYAN}" "${WHITE}")
+    
+    echo -e "${BOLD}${GREEN}[MATRIX MODE ACTIVATED]${RESET}"
+    
+    for ((i=0; i<duration*10; i++)); do
+        for ((j=0; j<5; j++)); do
+            local color=${colors[$((RANDOM % 3))]}
+            local char=${chars:$((RANDOM % 2)):1}
+            echo -ne "${color}${char}${RESET}"
+        done
+        echo -ne "\r"
+        sleep 0.1
+    done
+    echo -e "${GREEN}${BOLD}> ACCESS GRANTED ${ICON_LIGHTNING}${RESET}"
+}
+
+boot_sequence() {
+    local messages=(
+        "Initializing Dartotsu Protocol..."
+        "Loading anime database..."
+        "Establishing manga connections..."
+        "Optimizing streaming algorithms..."
+        "Synchronizing with otaku mainframe..."
+        "Ready for deployment!"
+    )
+    
+    echo -e "${GREEN}${DIM}[BOOT SEQUENCE INITIATED]${RESET}"
+    echo
+    
+    for msg in "${messages[@]}"; do
+        echo -ne "${CYAN}> ${msg}${RESET}"
+        sleep 0.5
+        echo -e " ${GREEN}[OK]${RESET}"
+        sleep 0.2
+    done
+    
+    echo
+    echo -e "${GREEN}${BOLD}${ICON_FIRE} SYSTEM READY ${ICON_FIRE}${RESET}"
+    sleep 1
 }
 
 # Progress bar
@@ -187,6 +245,7 @@ type_text() {
 
 # Cool banner
 show_banner() {
+    boot_sequence
     clear
     echo
     # Animated border effect
@@ -220,6 +279,46 @@ section_header() {
     echo
 }
 
+system_health_check() {
+    section_header "SYSTEM HEALTH SCAN" "${ICON_ROBOT}"
+    
+    echo -e "${CYAN}${ICON_LIGHTNING}${RESET} Running comprehensive system analysis..."
+    echo
+    
+    # Check RAM
+    local ram_total=$(free -m | awk 'NR==2{print $2}')
+    local ram_used=$(free -m | awk 'NR==2{print $3}')
+    local ram_percent=$((ram_used * 100 / ram_total))
+    
+    echo -ne "  ${ICON_DIAMOND} RAM Usage: "
+    if [ $ram_percent -lt 80 ]; then
+        echo -e "${GREEN}${ram_percent}% (${ram_used}MB/${ram_total}MB) ${ICON_SUCCESS}${RESET}"
+    else
+        echo -e "${YELLOW}${ram_percent}% (${ram_used}MB/${ram_total}MB) ${ICON_WARNING}${RESET}"
+    fi
+    
+    # Check disk space
+    local disk_usage=$(df -h "$HOME" | awk 'NR==2 {print $5}' | sed 's/%//')
+    echo -ne "  ${ICON_CRYSTAL} Disk Space: "
+    if [ "$disk_usage" -lt 90 ]; then
+        echo -e "${GREEN}${disk_usage}% used ${ICON_SUCCESS}${RESET}"
+    else
+        echo -e "${RED}${disk_usage}% used ${ICON_ERROR}${RESET}"
+    fi
+    
+    # Check internet connection
+    echo -ne "  ${ICON_GALAXY} Internet: "
+    if ping -c 1 google.com >/dev/null 2>&1; then
+        echo -e "${GREEN}Connected ${ICON_SUCCESS}${RESET}"
+    else
+        echo -e "${RED}Disconnected ${ICON_ERROR}${RESET}"
+    fi
+    
+    echo
+    echo -e "${GREEN}${BOLD}${ICON_SHIELD} System analysis complete!${RESET}"
+    sleep 2
+}
+
 # Success message with animation
 success_msg() {
     local msg="$1"
@@ -246,6 +345,30 @@ info_msg() {
     echo -e "${CYAN}${ICON_INFO}${RESET} ${msg}"
 }
 
+show_stats() {
+    local install_count_file="$HOME/.dartotsu_install_count"
+    local install_count=1
+    
+    if [ -f "$install_count_file" ]; then
+        install_count=$(cat "$install_count_file")
+        install_count=$((install_count + 1))
+    fi
+    
+    echo "$install_count" > "$install_count_file"
+    
+    echo
+    echo -e "${PURPLE}${BOLD}╔═══════════════════════════════════════════════════╗${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}              ${ICON_CROWN} INSTALLATION STATS ${ICON_CROWN}              ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}╠═══════════════════════════════════════════════════╣${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}                                                 ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_FIRE} Total Installations: ${YELLOW}${BOLD}${install_count}${RESET}                     ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_COMET} Install Date: ${CYAN}$(date '+%Y-%m-%d %H:%M:%S')${RESET}     ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_STAR} User: ${GREEN}$(whoami)${RESET}                              ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_MAGIC} OS: ${BLUE}$(uname -s)${RESET}                                ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}                                                 ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}╚═══════════════════════════════════════════════════╝${RESET}"
+}
+
 # Warning message
 warn_msg() {
     local msg="$1"
@@ -267,6 +390,7 @@ show_menu() {
     echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_BOMB} ${RED}${BOLD}[R]${RESET} ${ICON_UNINSTALL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}   ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}      ${RED}Complete annihilation of installation${RESET}       ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${PURPLE}${BOLD}[S]${RESET} ${ICON_CRYSTAL} System Health ${GRAY}(Check Performance)${RESET}  ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_SPARKLES} Quit ${GRAY}(Escape the Matrix)${RESET}            ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}      ${CYAN}Return to the real world${RESET}                   ${CYAN}${BOLD}║${RESET}"
@@ -274,6 +398,41 @@ show_menu() {
     echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════════════════════╝${RESET}"
     echo
     echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/Q)${RESET} ${ICON_MAGIC}: "
+}
+
+quick_launch_menu() {
+    echo
+    echo -e "${BOLD}${GREEN}╭─────────────────────────────────────────────╮${RESET}"
+    echo -e "${BOLD}${GREEN}│${RESET}           ${ICON_LIGHTNING} QUICK ACTIONS ${ICON_LIGHTNING}            ${GREEN}${BOLD}│${RESET}"
+    echo -e "${BOLD}${GREEN}╰─────────────────────────────────────────────╯${RESET}"
+    echo
+    echo -ne "${CYAN}${ICON_MAGIC}${RESET} Launch Dartotsu now? ${GRAY}(y/N)${RESET}: "
+    read -n 1 LAUNCH_NOW
+    echo
+    
+    if [[ "${LAUNCH_NOW,,}" == "y" ]]; then
+        echo -e "${GREEN}${ICON_FIRE} Launching Dartotsu...${RESET}"
+        if [ -x "$LINK" ]; then
+            "$LINK" &
+            echo -e "${GREEN}${ICON_SUCCESS} Dartotsu launched successfully!${RESET}"
+        else
+            echo -e "${RED}${ICON_ERROR} Could not launch Dartotsu${RESET}"
+        fi
+    fi
+}
+
+easter_egg_check() {
+    local current_time=$(date +%H%M)
+    local current_date=$(date +%m%d)
+    
+    if [ "$current_time" = "1337" ]; then
+        echo -e "${GREEN}${BOLD}🎉 LEET TIME DETECTED! 13:37 - You're a true hacker! 🎉${RESET}"
+        matrix_loading 2
+    elif [ "$current_date" = "0401" ]; then
+        echo -e "${PURPLE}${BOLD}🃏 APRIL FOOLS! Installing backwards compatibility mode... 🃏${RESET}"
+        sleep 2
+        echo -e "${GREEN}${BOLD}Just kidding! Proceeding with normal installation 😄${RESET}"
+    fi
 }
 
 # Version selection menu
@@ -301,39 +460,6 @@ version_menu() {
     echo -e "${BOLD}${GRAD2}╚═══════════════════════════════════════════════════════╝${RESET}"
     echo
     echo -ne "${BOLD}${WHITE}Choose your destiny${RESET} ${GRAY}(S/P/A)${RESET} ${ICON_MAGIC}: "
-}
-
-go_back_menu() {
-    echo
-    echo -e "${BOLD}${CYAN}╭─────────────────────────────────────────────╮${RESET}"
-    echo -e "${BOLD}${CYAN}│${RESET}                                           ${CYAN}${BOLD}│${RESET}"
-    echo -e "${BOLD}${CYAN}│${RESET}  ${ICON_MAGIC} ${GREEN}${BOLD}[M]${RESET} Main Menu ${GRAY}(Return to Control Panel)${RESET} ${CYAN}${BOLD}│${RESET}"
-    echo -e "${BOLD}${CYAN}│${RESET}  ${ICON_GHOST} ${RED}${BOLD}[Q]${RESET} Quit ${GRAY}(Exit Application)${RESET}        ${CYAN}${BOLD}│${RESET}"
-    echo -e "${BOLD}${CYAN}│${RESET}                                           ${CYAN}${BOLD}│${RESET}"
-    echo -e "${BOLD}${CYAN}╰─────────────────────────────────────────────╯${RESET}"
-    echo
-    echo -ne "${BOLD}${WHITE}What's next?${RESET} ${GRAY}(M/Q)${RESET} ${ICON_MAGIC}: "
-    
-    read -n 1 NEXT_ACTION
-    echo
-    
-    case "${NEXT_ACTION,,}" in
-        m|menu)
-            return 0  # Go back to main menu
-            ;;
-        q|quit|exit)
-            echo
-            type_text "Thanks for using Dartotsu Installer! ${ICON_SPARKLES}" 0.05
-            echo -e "${GRAY}${DIM}Goodbye!${RESET}"
-            exit 0
-            ;;
-        *)
-            echo
-            warn_msg "Invalid selection! Returning to main menu..."
-            sleep 1
-            return 0
-            ;;
-    esac
 }
 
 # =============================================================================
@@ -750,17 +876,23 @@ EOL
     echo
     success_msg "$APP_NAME has been installed successfully!"
     info_msg "You can now launch it from your applications menu or run: ${BOLD}$APP_NAME${RESET}"
-    
-    go_back_menu
+    show_stats
+    easter_egg_check 
+    quick_launch_menu
+    echo
+    echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
+    read -n 1
 }
 
 uninstall_app() {
     section_header "UNINSTALLATION PROCESS" "${ICON_UNINSTALL}"
     
     if [ ! -d "$INSTALL_DIR" ] && [ ! -L "$LINK" ]; then
-    warn_msg "$APP_NAME doesn't appear to be installed!"
-    go_back_menu
-    return
+        warn_msg "$APP_NAME doesn't appear to be installed!"
+        echo
+        echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
+        read -n 1
+        return
     fi
     
     echo -e "${YELLOW}${BOLD}Are you sure you want to remove $APP_NAME?${RESET} ${GRAY}(y/N)${RESET}: "
@@ -768,9 +900,11 @@ uninstall_app() {
     echo
     
     if [[ "${CONFIRM,,}" != "y" ]]; then
-    info_msg "Uninstallation cancelled."
-    go_back_menu
-    return
+        info_msg "Uninstallation cancelled."
+        echo
+        echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
+        read -n 1
+        return
     fi
     
     echo
@@ -806,7 +940,8 @@ update_app() {
         if [[ "${INSTALL_INSTEAD,,}" == "y" ]]; then
             install_app
         else
-            go_back_menu
+            echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
+            read -n 1
         fi
         return
     fi
@@ -840,6 +975,11 @@ main_loop() {
             r|remove|uninstall)
                 uninstall_app
                 ;;
+            s|system|health)
+                system_health_check
+                echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
+                read -n 1
+                ;;
             q|quit|exit)
                 echo
                 type_text "Thanks for using Dartotsu Installer! ${ICON_SPARKLES}" 0.05
@@ -848,7 +988,7 @@ main_loop() {
                 ;;
             *)
                 echo
-                warn_msg "Invalid selection! Please choose I, U, R, or Q."
+                warn_msg "Invalid selection! Please choose I, U, R, S, or Q."
                 echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
                 read -n 1
                 ;;
