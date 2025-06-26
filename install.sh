@@ -716,7 +716,7 @@ verify_installation() {
     
     # Verify library installations
     if command -v pkg-config >/dev/null 2>&1; then
-        if ! pkg-config --exists webkit2gtk-4.1 2>/dev/null && ! pkg-config --exists webkit2gtk-3.0 2>/dev/null; then
+        if ! pkg-config --exists webkit2gtk-4.1 2>/dev/null && ! pkg-config --exists webkit2gtk-4.0 2>/dev/null; then
             warn_msg "WebKit2GTK may not be properly installed - some features may not work"
         fi
     fi
