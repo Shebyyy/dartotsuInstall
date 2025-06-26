@@ -391,7 +391,7 @@ show_menu() {
     echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_BOMB} ${RED}${BOLD}[R]${RESET} ${ICON_UNINSTALL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}   ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}      ${RED}Complete annihilation of installation${RESET}       ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${PURPLE}${BOLD}[S]${RESET} ${ICON_CRYSTAL} System Health ${GRAY}(Check Performance)${RESET}  ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}      ${PURPLE}Monitor system performance and status${RESET}      ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_SPARKLES} Quit ${GRAY}(Escape the Matrix)${RESET}            ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}      ${CYAN}Return to the real world${RESET}                   ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
