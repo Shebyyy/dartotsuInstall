@@ -74,6 +74,223 @@ play_sound() {
 }
 
 # =============================================================================
+# 🎨 ANIMATED BOX FUNCTIONS
+# =============================================================================
+
+# Moving dots animation inside box borders
+animate_box_border() {
+    local width=${1:-60}
+    local height=${2:-10}
+    local duration=${3:-5}
+    local box_color="${4:-${CYAN}}"
+    local dot_colors=("${RED}" "${GREEN}" "${YELLOW}" "${BLUE}" "${PURPLE}" "${CYAN}")
+    
+    # Save cursor position
+    echo -ne "\033[s"
+    
+    # Create the box frame
+    echo -e "${BOLD}${box_color}╔$(printf '═%.0s' $(seq 1 $((width-2))))╗${RESET}"
+    for ((i=1; i<height-1; i++)); do
+        echo -e "${BOLD}${box_color}║$(printf ' %.0s' $(seq 1 $((width-2))))║${RESET}"
+    done
+    echo -e "${BOLD}${box_color}╚$(printf '═%.0s' $(seq 1 $((width-2))))╝${RESET}"
+    
+    # Animate dots for specified duration
+    local end_time=$(($(date +%s) + duration))
+    local dot_positions=()
+    local dot_dirs=()
+    local dot_colors_active=()
+    
+    # Initialize multiple dots
+    for ((d=0; d<3; d++)); do
+        dot_positions[$d]=$((2 + RANDOM % (width-4)))
+        dot_dirs[$d]=$((RANDOM % 2 == 0 ? 1 : -1))
+        dot_colors_active[$d]=${dot_colors[$((RANDOM % ${#dot_colors[@]}))]}
+    done
+    
+    while [ $(date +%s) -lt $end_time ]; do
+        # Move and draw dots on top border
+        echo -ne "\033[u\033[1B"  # Restore cursor and move to first line
+        echo -ne "${BOLD}${box_color}╔${RESET}"
+        
+        # Draw top border with moving dots
+        for ((pos=1; pos<width-1; pos++)); do
+            local is_dot=false
+            for ((d=0; d<3; d++)); do
+                if [ ${dot_positions[$d]} -eq $pos ]; then
+                    echo -ne "${BOLD}${dot_colors_active[$d]}●${RESET}"
+                    is_dot=true
+                    break
+                fi
+            done
+            if [ "$is_dot" = false ]; then
+                echo -ne "${BOLD}${box_color}═${RESET}"
+            fi
+        done
+        echo -ne "${BOLD}${box_color}╗${RESET}"
+        
+        # Update dot positions
+        for ((d=0; d<3; d++)); do
+            dot_positions[$d]=$((dot_positions[$d] + dot_dirs[$d]))
+            
+            # Bounce off walls
+            if [ ${dot_positions[$d]} -le 1 ]; then
+                dot_positions[$d]=2
+                dot_dirs[$d]=1
+                dot_colors_active[$d]=${dot_colors[$((RANDOM % ${#dot_colors[@]}))]}
+            elif [ ${dot_positions[$d]} -ge $((width-2)) ]; then
+                dot_positions[$d]=$((width-3))
+                dot_dirs[$d]=-1
+                dot_colors_active[$d]=${dot_colors[$((RANDOM % ${#dot_colors[@]}))]}
+            fi
+        done
+        
+        sleep 0.1
+    done
+    
+    # Restore original box
+    echo -ne "\033[u"
+    echo -e "${BOLD}${box_color}╔$(printf '═%.0s' $(seq 1 $((width-2))))╗${RESET}"
+}
+
+# Animated section header with moving dots
+animated_section_header() {
+    local title="$1"
+    local icon="$2"
+    local width=55
+    
+    echo
+    # Start animation
+    animate_box_border $width 3 2 "${BLUE}" &
+    local anim_pid=$!
+    
+    # Wait a moment then add content
+    sleep 0.5
+    
+    # Kill animation and draw final box with content
+    kill $anim_pid 2>/dev/null
+    wait $anim_pid 2>/dev/null
+    
+    echo -e "\033[3A"  # Move up 3 lines
+    echo -e "${BOLD}${BLUE}╔═══════════════════════════════════════════════════════╗${RESET}"
+    echo -e "${BOLD}${BLUE}║${RESET} ${icon} ${BOLD}${WHITE}${title}${RESET} ${BLUE}║${RESET}"
+    echo -e "${BOLD}${BLUE}╚═══════════════════════════════════════════════════════╝${RESET}"
+    echo
+}
+
+# Enhanced menu with animated borders
+animated_menu() {
+    local menu_width=57
+    
+    echo -e "${GRAD1}█${GRAD2}█${GRAD3}█${GRAD4}█${GRAD5}█${GRAD6}█${RESET} ${BOLD}DARTOTSU CONTROL PANEL${RESET} ${GRAD6}█${GRAD5}█${GRAD4}█${GRAD3}█${GRAD2}█${GRAD1}█${RESET}"
+    echo
+    
+    # Animate the menu box
+    animate_box_border $menu_width 12 3 "${CYAN}" &
+    local anim_pid=$!
+    sleep 1.5
+    kill $anim_pid 2>/dev/null
+    wait $anim_pid 2>/dev/null
+    
+    # Clear and redraw with content
+    echo -e "\033[13A"  # Move up to redraw
+    
+    echo -e "${BOLD}${CYAN}╔═══════════════════════════════════════════════════════╗${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${GREEN}${BOLD}[I]${RESET} ${ICON_DOWNLOAD} Install Dartotsu ${GRAY}(Get Started)${RESET}      ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}      ${GREEN}Deploy the ultimate anime experience${RESET}        ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[U]${RESET} ${ICON_UPDATE} Update Dartotsu ${GRAY}(Stay Current)${RESET}     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}      ${YELLOW}Upgrade to the latest and greatest${RESET}         ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_BOMB} ${RED}${BOLD}[R]${RESET} ${ICON_UNINSTALL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}   ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}      ${RED}Complete annihilation of installation${RESET}       ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${PURPLE}${BOLD}[S]${RESET} ${ICON_CRYSTAL} System Health ${GRAY}(Check Performance)${RESET}  ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}      ${PURPLE}Monitor system performance and status${RESET}      ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_SPARKLES} Quit ${GRAY}(Escape the Matrix)${RESET}            ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}      ${CYAN}Return to the real world${RESET}                   ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════════════════════╝${RESET}"
+    echo
+    echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/S/Q)${RESET} ${ICON_MAGIC}: "
+}
+
+# Animated stats box
+animated_stats() {
+    local install_count_file="$HOME/.dartotsu_install_count"
+    local install_count=1
+    
+    if [ -f "$install_count_file" ]; then
+        install_count=$(cat "$install_count_file")
+        install_count=$((install_count + 1))
+    fi
+    
+    echo "$install_count" > "$install_count_file"
+    
+    echo
+    
+    # Animate the stats box
+    animate_box_border 51 8 2 "${PURPLE}" &
+    local anim_pid=$!
+    sleep 1
+    kill $anim_pid 2>/dev/null
+    wait $anim_pid 2>/dev/null
+    
+    # Clear and redraw with content
+    echo -e "\033[9A"  # Move up to redraw
+    
+    echo -e "${PURPLE}${BOLD}╔═══════════════════════════════════════════════════╗${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}              ${ICON_CROWN} INSTALLATION STATS ${ICON_CROWN}              ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}╠═══════════════════════════════════════════════════╣${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}                                                 ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_FIRE} Total Installations: ${YELLOW}${BOLD}${install_count}${RESET}                     ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_COMET} Install Date: ${CYAN}$(date '+%Y-%m-%d %H:%M:%S')${RESET}     ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_STAR} User: ${GREEN}$(whoami)${RESET}                              ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_MAGIC} OS: ${BLUE}$(uname -s)${RESET}                                ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}║${RESET}                                                 ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${PURPLE}${BOLD}╚═══════════════════════════════════════════════════╝${RESET}"
+}
+
+# Animated version menu
+animated_version_menu() {
+    echo
+    # Animated title
+    for char in "V" "E" "R" "S" "I" "O" "N" " " "S" "E" "L" "E" "C" "T" "I" "O" "N"; do
+        echo -ne "${BOLD}${PURPLE}$char${RESET}"
+        sleep 0.05
+    done
+    echo
+    echo
+    
+    # Animate the version menu box
+    animate_box_border 55 10 2 "${GRAD2}" &
+    local anim_pid=$!
+    sleep 1
+    kill $anim_pid 2>/dev/null
+    wait $anim_pid 2>/dev/null
+    
+    # Clear and redraw with content
+    echo -e "\033[11A"  # Move up to redraw
+    
+    echo -e "${BOLD}${GRAD2}╔═══════════════════════════════════════════════════════╗${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_CROWN} ${GREEN}${BOLD}[S]${RESET} Stable Release ${GRAY}(Battle-Tested)${RESET}         ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}      ${ICON_SHIELD} Rock solid, enterprise ready            ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[P]${RESET} Pre-release ${GRAY}(Bleeding Edge)${RESET}          ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}      ${ICON_FIRE} Latest features, some bugs possible     ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_BOMB} ${PURPLE}${BOLD}[A]${RESET} Alpha Build ${GRAY}(Danger Zone!)${RESET}            ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}      ${ICON_SKULL} Experimental, use at your own risk     ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}╚═══════════════════════════════════════════════════════╝${RESET}"
+    echo
+    echo -ne "${BOLD}${WHITE}Choose your destiny${RESET} ${GRAY}(S/P/A)${RESET} ${ICON_MAGIC}: "
+}
+
+# =============================================================================
 # 🎭 ANIMATION & UI FUNCTIONS
 # =============================================================================
 
@@ -270,13 +487,7 @@ show_banner() {
 
 # Stylized section headers
 section_header() {
-    local title="$1"
-    local icon="$2"
-    echo
-    echo -e "${BOLD}${BLUE}╭─────────────────────────────────────────────────────╮${RESET}"
-    echo -e "${BOLD}${BLUE}│${RESET} ${icon} ${BOLD}${WHITE}${title}${RESET} ${BLUE}│${RESET}"
-    echo -e "${BOLD}${BLUE}╰─────────────────────────────────────────────────────╯${RESET}"
-    echo
+    animated_section_header "$1" "$2"
 }
 
 system_health_check() {
@@ -346,27 +557,7 @@ info_msg() {
 }
 
 show_stats() {
-    local install_count_file="$HOME/.dartotsu_install_count"
-    local install_count=1
-    
-    if [ -f "$install_count_file" ]; then
-        install_count=$(cat "$install_count_file")
-        install_count=$((install_count + 1))
-    fi
-    
-    echo "$install_count" > "$install_count_file"
-    
-    echo
-    echo -e "${PURPLE}${BOLD}╔═══════════════════════════════════════════════════╗${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}              ${ICON_CROWN} INSTALLATION STATS ${ICON_CROWN}              ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}╠═══════════════════════════════════════════════════╣${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}                                                 ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_FIRE} Total Installations: ${YELLOW}${BOLD}${install_count}${RESET}                     ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_COMET} Install Date: ${CYAN}$(date '+%Y-%m-%d %H:%M:%S')${RESET}     ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_STAR} User: ${GREEN}$(whoami)${RESET}                              ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_MAGIC} OS: ${BLUE}$(uname -s)${RESET}                                ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}                                                 ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}╚═══════════════════════════════════════════════════╝${RESET}"
+    animated_stats
 }
 
 # Warning message
@@ -377,29 +568,7 @@ warn_msg() {
 
 # Stylized menu
 show_menu() {
-    # Glitch effect
-    echo -e "${GRAD1}█${GRAD2}█${GRAD3}█${GRAD4}█${GRAD5}█${GRAD6}█${RESET} ${BOLD}DARTOTSU CONTROL PANEL${RESET} ${GRAD6}█${GRAD5}█${GRAD4}█${GRAD3}█${GRAD2}█${GRAD1}█${RESET}"
-    echo
-    echo -e "${BOLD}${CYAN}╔═══════════════════════════════════════════════════════╗${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${GREEN}${BOLD}[I]${RESET} ${ICON_DOWNLOAD} Install Dartotsu ${GRAY}(Get Started)${RESET}      ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}      ${GREEN}Deploy the ultimate anime experience${RESET}        ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[U]${RESET} ${ICON_UPDATE} Update Dartotsu ${GRAY}(Stay Current)${RESET}     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}      ${YELLOW}Upgrade to the latest and greatest${RESET}         ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_BOMB} ${RED}${BOLD}[R]${RESET} ${ICON_UNINSTALL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}   ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}      ${RED}Complete annihilation of installation${RESET}       ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${PURPLE}${BOLD}[S]${RESET} ${ICON_CRYSTAL} System Health ${GRAY}(Check Performance)${RESET}  ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}      ${PURPLE}Monitor system performance and status${RESET}      ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_SPARKLES} Quit ${GRAY}(Escape the Matrix)${RESET}            ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}      ${CYAN}Return to the real world${RESET}                   ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════════════════════╝${RESET}"
-    echo
-    echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/S/Q)${RESET} ${ICON_MAGIC}: "
+    animated_menu
 }
 
 quick_launch_menu() {
@@ -439,29 +608,7 @@ easter_egg_check() {
 
 # Version selection menu
 version_menu() {
-    echo
-    # Animated title
-    for char in "V" "E" "R" "S" "I" "O" "N" " " "S" "E" "L" "E" "C" "T" "I" "O" "N"; do
-        echo -ne "${BOLD}${PURPLE}$char${RESET}"
-        sleep 0.05
-    done
-    echo
-    echo
-    
-    echo -e "${BOLD}${GRAD2}╔═══════════════════════════════════════════════════════╗${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_CROWN} ${GREEN}${BOLD}[S]${RESET} Stable Release ${GRAY}(Battle-Tested)${RESET}         ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}      ${ICON_SHIELD} Rock solid, enterprise ready            ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[P]${RESET} Pre-release ${GRAY}(Bleeding Edge)${RESET}          ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}      ${ICON_FIRE} Latest features, some bugs possible     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_BOMB} ${PURPLE}${BOLD}[A]${RESET} Alpha Build ${GRAY}(Danger Zone!)${RESET}            ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}      ${ICON_SKULL} Experimental, use at your own risk     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}╚═══════════════════════════════════════════════════════╝${RESET}"
-    echo
-    echo -ne "${BOLD}${WHITE}Choose your destiny${RESET} ${GRAY}(S/P/A)${RESET} ${ICON_MAGIC}: "
+    animated_version_menu
 }
 
 # =============================================================================
