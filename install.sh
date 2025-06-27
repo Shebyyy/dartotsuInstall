@@ -60,20 +60,6 @@ ICON_COMET="☄️"
 ICON_GALAXY="🌌"
 
 # =============================================================================
-# 🎵 SOUND EFFECTS
-# =============================================================================
-play_sound() {
-    local sound_type="$1"
-    if command -v paplay >/dev/null 2>&1; then
-        case "$sound_type" in
-            "success") echo -e "\a" ;;
-            "error") for i in {1..3}; do echo -e "\a"; sleep 0.1; done ;;
-            "notification") echo -e "\a" ;;
-        esac
-    fi
-}
-
-# =============================================================================
 # 🎭 ANIMATION & UI FUNCTIONS
 # =============================================================================
 
@@ -90,50 +76,6 @@ spinner() {
         printf "\b\b\b\b\b\b"
     done
     printf "    \b\b\b\b"
-}
-
-matrix_loading() {
-    local duration=${1:-3}
-    local chars="01"
-    local colors=("${GREEN}" "${CYAN}" "${WHITE}")
-    
-    echo -e "${BOLD}${GREEN}[MATRIX MODE ACTIVATED]${RESET}"
-    
-    for ((i=0; i<duration*10; i++)); do
-        for ((j=0; j<5; j++)); do
-            local color=${colors[$((RANDOM % 3))]}
-            local char=${chars:$((RANDOM % 2)):1}
-            echo -ne "${color}${char}${RESET}"
-        done
-        echo -ne "\r"
-        sleep 0.1
-    done
-    echo -e "${GREEN}${BOLD}> ACCESS GRANTED ${ICON_LIGHTNING}${RESET}"
-}
-
-boot_sequence() {
-    local messages=(
-        "Initializing Dartotsu Protocol..."
-        "Loading anime database..."
-        "Establishing manga connections..."
-        "Optimizing streaming algorithms..."
-        "Synchronizing with otaku mainframe..."
-        "Ready for deployment!"
-    )
-    
-    echo -e "${GREEN}${DIM}[BOOT SEQUENCE INITIATED]${RESET}"
-    echo
-    
-    for msg in "${messages[@]}"; do
-        echo -ne "${CYAN}> ${msg}${RESET}"
-        sleep 0.5
-        echo -e " ${GREEN}[OK]${RESET}"
-        sleep 0.2
-    done
-    
-    echo
-    echo -e "${GREEN}${BOLD}${ICON_FIRE} SYSTEM READY ${ICON_FIRE}${RESET}"
-    sleep 1
 }
 
 # Progress bar
@@ -183,15 +125,106 @@ compare_commits() {
     sleep 0.5
     echo -e "${GREEN}${DIM}> Cross-referencing SHA hashes...${RESET}"
     sleep 0.5
+    echo -e "${GREEN}${DIM}> Searching for build commits...${RESET}"
+    sleep 0.5
     
-    # Get data
-    local main_commit=$(curl -s "https://api.github.com/repos/${main_repo}/commits" | grep '"sha"' | head -1 | cut -d '"' -f 4 | cut -c1-7)
-    local main_date=$(curl -s "https://api.github.com/repos/${main_repo}/commits" | grep '"date"' | head -1 | cut -d '"' -f 4)
-    local main_author=$(curl -s "https://api.github.com/repos/${main_repo}/commits" | grep '"name"' | head -1 | cut -d '"' -f 4)
+    # Get all commits from main repo
+    local commits_json=$(curl -s "https://api.github.com/repos/${main_repo}/commits?per_page=100")
     
-    local alpha_release=$(curl -s "https://api.github.com/repos/${alpha_repo}/releases/latest")
-    local alpha_tag=$(echo "$alpha_release" | grep '"tag_name"' | cut -d '"' -f 4)
-    local alpha_date=$(echo "$alpha_release" | grep '"published_at"' | cut -d '"' -f 4)
+    # Find the latest commit that contains any of the build tags
+    local main_commit=""
+    local main_date=""
+    local main_author=""
+    local main_message=""
+    
+    # Build tags to search for
+    local build_tags=("[build.all]" "[build.apk]" "[build.windows]" "[build.linux]" "[build.ios]" "[build.macos]")
+    
+    # Parse commits and find the first one with build tags
+    local found_build_commit=false
+    while IFS= read -r commit_data; do
+        local commit_sha=$(echo "$commit_data" | jq -r '.sha // empty' 2>/dev/null)
+        local commit_message=$(echo "$commit_data" | jq -r '.commit.message // empty' 2>/dev/null)
+        local commit_date=$(echo "$commit_data" | jq -r '.commit.committer.date // empty' 2>/dev/null)
+        local commit_author=$(echo "$commit_data" | jq -r '.commit.author.name // empty' 2>/dev/null)
+        
+        # Skip if any field is empty
+        [[ -z "$commit_sha" || -z "$commit_message" || -z "$commit_date" || -z "$commit_author" ]] && continue
+        
+        # Check if commit message contains any build tags
+        for tag in "${build_tags[@]}"; do
+            if [[ "$commit_message" == *"$tag"* ]]; then
+                main_commit="${commit_sha:0:7}"
+                main_date="$commit_date"
+                main_author="$commit_author"
+                main_message="$commit_message"
+                found_build_commit=true
+                break 2  # Break out of both loops
+            fi
+        done
+    done < <(echo "$commits_json" | jq -c '.[]' 2>/dev/null)
+    
+    # Fallback to latest commit if no build commit found
+    if [[ "$found_build_commit" == false ]]; then
+        echo -e "${YELLOW}${DIM}> No build commits found, using latest commit...${RESET}"
+        main_commit=$(echo "$commits_json" | jq -r '.[0].sha' 2>/dev/null | cut -c1-7)
+        main_date=$(echo "$commits_json" | jq -r '.[0].commit.committer.date' 2>/dev/null)
+        main_author=$(echo "$commits_json" | jq -r '.[0].commit.author.name' 2>/dev/null)
+        main_message=$(echo "$commits_json" | jq -r '.[0].commit.message' 2>/dev/null)
+    fi
+    
+    # Get alpha repo commits and find latest build commit
+    local alpha_commits_json=$(curl -s "https://api.github.com/repos/${alpha_repo}/commits?per_page=100")
+    
+    local alpha_commit=""
+    local alpha_date=""
+    local alpha_author=""
+    local alpha_message=""
+    
+    # Find the latest commit that contains any of the build tags in alpha repo
+    local found_alpha_build_commit=false
+    while IFS= read -r commit_data; do
+        local commit_sha=$(echo "$commit_data" | jq -r '.sha // empty' 2>/dev/null)
+        local commit_message=$(echo "$commit_data" | jq -r '.commit.message // empty' 2>/dev/null)
+        local commit_date=$(echo "$commit_data" | jq -r '.commit.committer.date // empty' 2>/dev/null)
+        local commit_author=$(echo "$commit_data" | jq -r '.commit.author.name // empty' 2>/dev/null)
+        
+        # Skip if any field is empty
+        [[ -z "$commit_sha" || -z "$commit_message" || -z "$commit_date" || -z "$commit_author" ]] && continue
+        
+        # Check if commit message contains any build tags
+        for tag in "${build_tags[@]}"; do
+            if [[ "$commit_message" == *"$tag"* ]]; then
+                alpha_commit="${commit_sha:0:7}"
+                alpha_date="$commit_date"
+                alpha_author="$commit_author"
+                alpha_message="$commit_message"
+                found_alpha_build_commit=true
+                break 2  # Break out of both loops
+            fi
+        done
+    done < <(echo "$alpha_commits_json" | jq -c '.[]' 2>/dev/null)
+    
+    # Fallback to latest release info if no build commit found
+    if [[ "$found_alpha_build_commit" == false ]]; then
+        echo -e "${YELLOW}${DIM}> No alpha build commits found, using latest release...${RESET}"
+        local alpha_release=$(curl -s "https://api.github.com/repos/${alpha_repo}/releases/latest")
+        local alpha_tag=$(echo "$alpha_release" | jq -r '.tag_name // empty' 2>/dev/null)
+        alpha_date=$(echo "$alpha_release" | jq -r '.published_at // empty' 2>/dev/null)
+        alpha_commit="${alpha_tag}"
+        alpha_author="Release"
+        alpha_message="Latest release: ${alpha_tag}"
+    fi
+    
+    # Truncate alpha commit message if too long
+    if [[ ${#alpha_message} -gt 50 ]]; then
+        alpha_message="${alpha_message:0:47}..."
+    fi
+    
+    # Truncate commit message if too long
+    if [[ ${#main_message} -gt 50 ]]; then
+        main_message="${main_message:0:47}..."
+    fi
     
     echo
     echo -e "${BOLD}${PURPLE}╔═══════════════════════════════════════════════════════════════╗${RESET}"
@@ -199,22 +232,25 @@ compare_commits() {
     echo -e "${BOLD}${PURPLE}╠═══════════════════════════════════════════════════════════════╣${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET} ${ICON_GALAXY} ${BOLD}MAIN REPOSITORY${RESET} ${GRAY}(${main_repo})${RESET}          ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_DIAMOND} Commit SHA: ${YELLOW}${BOLD}${main_commit}${RESET}                           ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_DIAMOND} Build Commit: ${YELLOW}${BOLD}${main_commit}${RESET}                        ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_STAR} Author: ${CYAN}${main_author}${RESET}                              ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}  ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_FIRE} Message: ${WHITE}${main_message}${RESET}                     ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo "$main_date")${RESET}  ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET} ${ICON_ALIEN} ${BOLD}ALPHA REPOSITORY${RESET} ${GRAY}(${alpha_repo})${RESET} ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_BOMB} Release Tag: ${PURPLE}${BOLD}${alpha_tag}${RESET}                            ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_GHOST} Published: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}    ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_BOMB} Build Commit: ${PURPLE}${BOLD}${alpha_commit}${RESET}                        ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_STAR} Author: ${CYAN}${alpha_author}${RESET}                              ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_FIRE} Message: ${WHITE}${alpha_message}${RESET}                     ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_GHOST} Timestamp: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo "$alpha_date")${RESET}    ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
     
     # Sync status with epic effects
-    if [[ "$alpha_tag" == *"$main_commit"* ]]; then
+    if [[ "$alpha_commit" == "$main_commit" ]]; then
         echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_MAGIC} SYNC STATUS: ${GREEN}${BOLD}${ICON_FIRE} PERFECTLY SYNCHRONIZED ${ICON_FIRE}${RESET}   ${PURPLE}${BOLD}║${RESET}"
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${GREEN}${ICON_LIGHTNING} Repositories are in perfect harmony! ${ICON_LIGHTNING}${RESET}           ${PURPLE}${BOLD}║${RESET}"
+        echo -e "${BOLD}${PURPLE}║${RESET}   ${GREEN}${ICON_LIGHTNING} Build commits are identical! ${ICON_LIGHTNING}${RESET}                ${PURPLE}${BOLD}║${RESET}"
     else
         echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_CRYSTAL} SYNC STATUS: ${YELLOW}${BOLD}${ICON_SWORD} DIVERGED TIMELINES ${ICON_SWORD}${RESET}     ${PURPLE}${BOLD}║${RESET}"
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${YELLOW}${ICON_SKULL} Alpha may contain different features ${ICON_SKULL}${RESET}            ${PURPLE}${BOLD}║${RESET}"
+        echo -e "${BOLD}${PURPLE}║${RESET}   ${YELLOW}${ICON_SKULL} Different build commits detected ${ICON_SKULL}${RESET}               ${PURPLE}${BOLD}║${RESET}"
     fi
     
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
@@ -245,7 +281,6 @@ type_text() {
 
 # Cool banner
 show_banner() {
-    boot_sequence
     clear
     echo
     # Animated border effect
@@ -279,46 +314,6 @@ section_header() {
     echo
 }
 
-system_health_check() {
-    section_header "SYSTEM HEALTH SCAN" "${ICON_ROBOT}"
-    
-    echo -e "${CYAN}${ICON_LIGHTNING}${RESET} Running comprehensive system analysis..."
-    echo
-    
-    # Check RAM
-    local ram_total=$(free -m | awk 'NR==2{print $2}')
-    local ram_used=$(free -m | awk 'NR==2{print $3}')
-    local ram_percent=$((ram_used * 100 / ram_total))
-    
-    echo -ne "  ${ICON_DIAMOND} RAM Usage: "
-    if [ $ram_percent -lt 80 ]; then
-        echo -e "${GREEN}${ram_percent}% (${ram_used}MB/${ram_total}MB) ${ICON_SUCCESS}${RESET}"
-    else
-        echo -e "${YELLOW}${ram_percent}% (${ram_used}MB/${ram_total}MB) ${ICON_WARNING}${RESET}"
-    fi
-    
-    # Check disk space
-    local disk_usage=$(df -h "$HOME" | awk 'NR==2 {print $5}' | sed 's/%//')
-    echo -ne "  ${ICON_CRYSTAL} Disk Space: "
-    if [ "$disk_usage" -lt 90 ]; then
-        echo -e "${GREEN}${disk_usage}% used ${ICON_SUCCESS}${RESET}"
-    else
-        echo -e "${RED}${disk_usage}% used ${ICON_ERROR}${RESET}"
-    fi
-    
-    # Check internet connection
-    echo -ne "  ${ICON_GALAXY} Internet: "
-    if ping -c 1 google.com >/dev/null 2>&1; then
-        echo -e "${GREEN}Connected ${ICON_SUCCESS}${RESET}"
-    else
-        echo -e "${RED}Disconnected ${ICON_ERROR}${RESET}"
-    fi
-    
-    echo
-    echo -e "${GREEN}${BOLD}${ICON_SHIELD} System analysis complete!${RESET}"
-    sleep 2
-}
-
 # Success message with animation
 success_msg() {
     local msg="$1"
@@ -345,30 +340,6 @@ info_msg() {
     echo -e "${CYAN}${ICON_INFO}${RESET} ${msg}"
 }
 
-show_stats() {
-    local install_count_file="$HOME/.dartotsu_install_count"
-    local install_count=1
-    
-    if [ -f "$install_count_file" ]; then
-        install_count=$(cat "$install_count_file")
-        install_count=$((install_count + 1))
-    fi
-    
-    echo "$install_count" > "$install_count_file"
-    
-    echo
-    echo -e "${PURPLE}${BOLD}╔═══════════════════════════════════════════════════╗${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}              ${ICON_CROWN} INSTALLATION STATS ${ICON_CROWN}              ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}╠═══════════════════════════════════════════════════╣${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}                                                 ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_FIRE} Total Installations: ${YELLOW}${BOLD}${install_count}${RESET}                     ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_COMET} Install Date: ${CYAN}$(date '+%Y-%m-%d %H:%M:%S')${RESET}     ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_STAR} User: ${GREEN}$(whoami)${RESET}                              ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}  ${ICON_MAGIC} OS: ${BLUE}$(uname -s)${RESET}                                ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}║${RESET}                                                 ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${PURPLE}${BOLD}╚═══════════════════════════════════════════════════╝${RESET}"
-}
-
 # Warning message
 warn_msg() {
     local msg="$1"
@@ -391,50 +362,12 @@ show_menu() {
     echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_BOMB} ${RED}${BOLD}[R]${RESET} ${ICON_UNINSTALL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}   ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}      ${RED}Complete annihilation of installation${RESET}       ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${PURPLE}${BOLD}[S]${RESET} ${ICON_CRYSTAL} System Health ${GRAY}(Check Performance)${RESET}  ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}      ${PURPLE}Monitor system performance and status${RESET}      ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_SPARKLES} Quit ${GRAY}(Escape the Matrix)${RESET}            ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}      ${CYAN}Return to the real world${RESET}                   ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════════════════════╝${RESET}"
     echo
-    echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/S/Q)${RESET} ${ICON_MAGIC}: "
-}
-
-quick_launch_menu() {
-    echo
-    echo -e "${BOLD}${GREEN}╭─────────────────────────────────────────────╮${RESET}"
-    echo -e "${BOLD}${GREEN}│${RESET}           ${ICON_LIGHTNING} QUICK ACTIONS ${ICON_LIGHTNING}            ${GREEN}${BOLD}│${RESET}"
-    echo -e "${BOLD}${GREEN}╰─────────────────────────────────────────────╯${RESET}"
-    echo
-    echo -ne "${CYAN}${ICON_MAGIC}${RESET} Launch Dartotsu now? ${GRAY}(y/N)${RESET}: "
-    read -n 1 LAUNCH_NOW
-    echo
-    
-    if [[ "${LAUNCH_NOW,,}" == "y" ]]; then
-        echo -e "${GREEN}${ICON_FIRE} Launching Dartotsu...${RESET}"
-        if [ -x "$LINK" ]; then
-            "$LINK" &
-            echo -e "${GREEN}${ICON_SUCCESS} Dartotsu launched successfully!${RESET}"
-        else
-            echo -e "${RED}${ICON_ERROR} Could not launch Dartotsu${RESET}"
-        fi
-    fi
-}
-
-easter_egg_check() {
-    local current_time=$(date +%H%M)
-    local current_date=$(date +%m%d)
-    
-    if [ "$current_time" = "1337" ]; then
-        echo -e "${GREEN}${BOLD}🎉 LEET TIME DETECTED! 13:37 - You're a true hacker! 🎉${RESET}"
-        matrix_loading 2
-    elif [ "$current_date" = "0401" ]; then
-        echo -e "${PURPLE}${BOLD}🃏 APRIL FOOLS! Installing backwards compatibility mode... 🃏${RESET}"
-        sleep 2
-        echo -e "${GREEN}${BOLD}Just kidding! Proceeding with normal installation 😄${RESET}"
-    fi
+    echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/Q)${RESET} ${ICON_MAGIC}: "
 }
 
 # Version selection menu
@@ -543,7 +476,7 @@ check_dependencies() {
     if command -v pkg-config >/dev/null 2>&1; then
         # Check for WebKit2GTK with fallback to older version
         if ! pkg-config --exists webkit2gtk-4.1 2>/dev/null; then
-            if ! pkg-config --exists webkit2gtk-4.1-0 2>/dev/null; then
+            if ! pkg-config --exists libwebkit2gtk-4.1-0 2>/dev/null; then
                 missing_deps+=("webkit2gtk")
             fi
         fi
@@ -716,7 +649,7 @@ verify_installation() {
     
     # Verify library installations
     if command -v pkg-config >/dev/null 2>&1; then
-        if ! pkg-config --exists webkit2gtk-4.1 2>/dev/null && ! pkg-config --exists webkit2gtk-4.0 2>/dev/null; then
+        if ! pkg-config --exists webkit2gtk-4.1 2>/dev/null && ! pkg-config --exists webkit2gtk-3.0 2>/dev/null; then
             warn_msg "WebKit2GTK may not be properly installed - some features may not work"
         fi
     fi
@@ -878,9 +811,7 @@ EOL
     echo
     success_msg "$APP_NAME has been installed successfully!"
     info_msg "You can now launch it from your applications menu or run: ${BOLD}$APP_NAME${RESET}"
-    show_stats
-    easter_egg_check 
-    quick_launch_menu
+    
     echo
     echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
     read -n 1
@@ -977,11 +908,6 @@ main_loop() {
             r|remove|uninstall)
                 uninstall_app
                 ;;
-            s|system|health)
-                system_health_check
-                echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
-                read -n 1
-                ;;
             q|quit|exit)
                 echo
                 type_text "Thanks for using Dartotsu Installer! ${ICON_SPARKLES}" 0.05
@@ -990,7 +916,7 @@ main_loop() {
                 ;;
             *)
                 echo
-                warn_msg "Invalid selection! Please choose I, U, R, S, or Q."
+                warn_msg "Invalid selection! Please choose I, U, R, or Q."
                 echo -e "${GRAY}${DIM}Press any key to continue...${RESET}"
                 read -n 1
                 ;;
