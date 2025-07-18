@@ -2,7 +2,7 @@
 set -e
 
 # =============================================================================
-# 🎯 DARTOTSU INSTALLER - Beautiful Terminal Experience (Security Enhanced & Aligned)
+# 🎯 DARTOTSU INSTALLER - Beautiful Terminal Experience (Complete Enhanced Version)
 # =============================================================================
 
 # Define application details
@@ -17,74 +17,192 @@ DESKTOP_FILE="$HOME/.local/share/applications/$APP_NAME.desktop"
 ICON_FILE="$HOME/.local/share/icons/$APP_NAME.png"
 
 # =============================================================================
-# 🎨 COLORS & STYLING
+# 🎨 COLORS & STYLING WITH CROSS-PLATFORM COMPATIBILITY
 # =============================================================================
 
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[1;37m'
-GRAY='\033[0;90m'
-BOLD='\033[1m'
-DIM='\033[2m'
-RESET='\033[0m'
+# Initialize colors with terminal detection
+init_colors() {
+    if [ -t 1 ] && command -v tput >/dev/null 2>&1; then
+        # Terminal supports colors
+        RED=$(tput setaf 1)
+        GREEN=$(tput setaf 2)
+        YELLOW=$(tput setaf 3)
+        BLUE=$(tput setaf 4)
+        PURPLE=$(tput setaf 5)
+        CYAN=$(tput setaf 6)
+        WHITE=$(tput setaf 7)
+        GRAY=$(tput setaf 8)
+        BOLD=$(tput bold)
+        DIM=$(tput dim)
+        RESET=$(tput sgr0)
+        
+        # Enhanced colors if 256-color support is available
+        if [ "$(tput colors 2>/dev/null || echo 0)" -ge 256 ]; then
+            GRAD1=$(tput setaf 30)   # Dark teal
+            GRAD2=$(tput setaf 36)   # Medium teal
+            GRAD3=$(tput setaf 42)   # Teal
+            GRAD4=$(tput setaf 48)   # Light teal
+            GRAD5=$(tput setaf 51)   # Cyan
+            GRAD6=$(tput setaf 87)   # Bright cyan
+        else
+            # Fallback to basic colors
+            GRAD1="$CYAN"
+            GRAD2="$CYAN"
+            GRAD3="$CYAN"
+            GRAD4="$CYAN"
+            GRAD5="$CYAN"
+            GRAD6="$CYAN"
+        fi
+    else
+        # No color support - use empty strings
+        RED=""
+        GREEN=""
+        YELLOW=""
+        BLUE=""
+        PURPLE=""
+        CYAN=""
+        WHITE=""
+        GRAY=""
+        BOLD=""
+        DIM=""
+        RESET=""
+        GRAD1=""
+        GRAD2=""
+        GRAD3=""
+        GRAD4=""
+        GRAD5=""
+        GRAD6=""
+    fi
+}
 
-# Dartotsu gradient colors (teal to cyan)
-GRAD1='\033[38;5;30m'   # Dark teal
-GRAD2='\033[38;5;36m'   # Medium teal
-GRAD3='\033[38;5;42m'   # Teal
-GRAD4='\033[38;5;48m'   # Light teal
-GRAD5='\033[38;5;51m'   # Cyan
-GRAD6='\033[38;5;87m'   # Bright cyan
+# Initialize colors
+init_colors
 
-# Icons
-ICON_FIRE="🔥"
-ICON_LIGHTNING="⚡"
-ICON_STAR="⭐"
-ICON_DIAMOND="💎"
-ICON_BOMB="💣"
-ICON_SKULL="💀"
-ICON_ROBOT="🤖"
-ICON_ALIEN="👽"
-ICON_GHOST="👻"
-ICON_MAGIC="🪄"
-ICON_CRYSTAL="🔮"
-ICON_SWORD="⚔️"
-ICON_SHIELD="🛡️"
-ICON_CROWN="👑"
-ICON_COMET="☄️"
-ICON_GALAXY="🌌"
-ICON_SECURITY="🔒"
-ICON_WARNING="⚠️"
-ICON_SUCCESS="✅"
-ICON_ERROR="❌"
-ICON_INFO="ℹ️"
-ICON_DOWNLOAD="📥"
-ICON_INSTALL="🔧"
-ICON_UPDATE="🔄"
-ICON_UNINSTALL="🗑️"
-ICON_SPARKLES="✨"
-ICON_ROCKET="🚀"
+# Icons with Unicode fallbacks
+if locale charmap 2>/dev/null | grep -qi utf; then
+    # Full Unicode support
+    ICON_FIRE="🔥"
+    ICON_LIGHTNING="⚡"
+    ICON_STAR="⭐"
+    ICON_DIAMOND="💎"
+    ICON_BOMB="💣"
+    ICON_SKULL="💀"
+    ICON_ROBOT="🤖"
+    ICON_ALIEN="👽"
+    ICON_GHOST="👻"
+    ICON_MAGIC="🪄"
+    ICON_CRYSTAL="🔮"
+    ICON_SWORD="⚔️"
+    ICON_SHIELD="🛡️"
+    ICON_CROWN="👑"
+    ICON_COMET="☄️"
+    ICON_GALAXY="🌌"
+    ICON_SECURITY="🔒"
+    ICON_WARNING="⚠️"
+    ICON_SUCCESS="✅"
+    ICON_ERROR="❌"
+    ICON_INFO="ℹ️"
+    ICON_DOWNLOAD="📥"
+    ICON_INSTALL="🔧"
+    ICON_UPDATE="🔄"
+    ICON_UNINSTALL="🗑️"
+    ICON_SPARKLES="✨"
+    ICON_ROCKET="🚀"
+    
+    # Box drawing characters
+    BOX_H="═"
+    BOX_V="║"
+    BOX_TL="╔"
+    BOX_TR="╗"
+    BOX_BL="╚"
+    BOX_BR="╝"
+    BOX_T="╦"
+    BOX_B="╩"
+    BOX_L="╠"
+    BOX_R="╣"
+    BOX_X="╬"
+    
+    # Light box drawing
+    LIGHT_H="─"
+    LIGHT_V="│"
+    LIGHT_TL="╭"
+    LIGHT_TR="╮"
+    LIGHT_BL="╰"
+    LIGHT_BR="╯"
+else
+    # ASCII fallbacks
+    ICON_FIRE="*"
+    ICON_LIGHTNING="!"
+    ICON_STAR="*"
+    ICON_DIAMOND="<>"
+    ICON_BOMB="@"
+    ICON_SKULL="X"
+    ICON_ROBOT="R"
+    ICON_ALIEN="A"
+    ICON_GHOST="G"
+    ICON_MAGIC="+"
+    ICON_CRYSTAL="O"
+    ICON_SWORD="/"
+    ICON_SHIELD="S"
+    ICON_CROWN="^"
+    ICON_COMET="~"
+    ICON_GALAXY="*"
+    ICON_SECURITY="S"
+    ICON_WARNING="!"
+    ICON_SUCCESS="+"
+    ICON_ERROR="X"
+    ICON_INFO="i"
+    ICON_DOWNLOAD="v"
+    ICON_INSTALL="+"
+    ICON_UPDATE="^"
+    ICON_UNINSTALL="X"
+    ICON_SPARKLES="*"
+    ICON_ROCKET="^"
+    
+    # ASCII box drawing
+    BOX_H="="
+    BOX_V="|"
+    BOX_TL="+"
+    BOX_TR="+"
+    BOX_BL="+"
+    BOX_BR="+"
+    BOX_T="+"
+    BOX_B="+"
+    BOX_L="+"
+    BOX_R="+"
+    BOX_X="+"
+    
+    # Light box drawing
+    LIGHT_H="-"
+    LIGHT_V="|"
+    LIGHT_TL="+"
+    LIGHT_TR="+"
+    LIGHT_BL="+"
+    LIGHT_BR="+"
+fi
 
 # =============================================================================
 # 🛠️ UTILITY FUNCTIONS
 # =============================================================================
 
-# Get visual width of text (excluding ANSI codes)
+# Get visual width of text (excluding ANSI codes and emoji)
 get_visual_width() {
     local text="$1"
-    # Remove ANSI escape sequences and emoji
-    local clean_text=$(echo "$text" | sed 's/\x1b\[[0-9;]*[mGKHJ]//g' | sed 's/[[:space:]]*[🔥⚡⭐💎💣💀🤖👽👻🪄🔮⚔️🛡️👑☄️🌌🔒⚠️✅❌ℹ️📥🔧🔄🗑️✨🚀][[:space:]]*/X/g')
-    echo "${#clean_text}"
+    # Remove ANSI escape sequences
+    local clean_text=$(printf '%s' "$text" | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g')
+    # Remove emoji and Unicode icons (rough approximation)
+    clean_text=$(printf '%s' "$clean_text" | sed 's/[^\x00-\x7F]//g')
+    printf '%s' "$clean_text" | wc -c
 }
 
 # Get terminal width
 get_terminal_width() {
-    local width=$(tput cols 2>/dev/null || echo "80")
+    local width
+    if command -v tput >/dev/null 2>&1; then
+        width=$(tput cols 2>/dev/null || echo "80")
+    else
+        width=${COLUMNS:-80}
+    fi
     echo "$width"
 }
 
@@ -92,10 +210,11 @@ get_terminal_width() {
 create_padded_line() {
     local content="$1"
     local total_width="$2"
-    local border_char="${3:-│}"
+    local border_char="${3:-$BOX_V}"
     
     local content_width=$(get_visual_width "$content")
-    local padding_needed=$((total_width - content_width - 4))  # 4 for borders and spaces
+    local inner_width=$((total_width - 4))  # Account for borders and spaces
+    local padding_needed=$((inner_width - content_width))
     
     if [ $padding_needed -lt 0 ]; then
         padding_needed=0
@@ -104,25 +223,23 @@ create_padded_line() {
     local padding_left=$((padding_needed / 2))
     local padding_right=$((padding_needed - padding_left))
     
-    printf "${BOLD}${CYAN}${border_char}${RESET}"
-    printf "%*s" $padding_left ""
-    printf "%s" "$content"
+    printf "%s%s%s" "$BOLD$CYAN$border_char$RESET" " " "$content"
     printf "%*s" $padding_right ""
-    printf "${BOLD}${CYAN}${border_char}${RESET}\n"
+    printf "%s%s\n" " " "$BOLD$CYAN$border_char$RESET"
 }
 
 # Create horizontal border line
 create_border_line() {
     local width="$1"
-    local char="${2:-═}"
-    local start_char="${3:-╔}"
-    local end_char="${4:-╗}"
+    local char="${2:-$BOX_H}"
+    local start_char="${3:-$BOX_TL}"
+    local end_char="${4:-$BOX_TR}"
     
-    printf "${BOLD}${CYAN}${start_char}${RESET}"
+    printf "%s%s%s" "$BOLD$CYAN$start_char$RESET" ""
     for ((i=2; i<width; i++)); do
-        printf "${BOLD}${CYAN}${char}${RESET}"
+        printf "%s%s%s" "$BOLD$CYAN$char$RESET" ""
     done
-    printf "${BOLD}${CYAN}${end_char}${RESET}\n"
+    printf "%s%s\n" "$BOLD$CYAN$end_char$RESET" ""
 }
 
 # =============================================================================
@@ -133,10 +250,12 @@ create_border_line() {
 spinner() {
     local pid=$1
     local delay=0.1
-    local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
-        local temp=${spinstr#?}
-        printf " [${CYAN}%c${RESET}]  " "$spinstr"
+    local spinstr='/-\|'
+    local temp
+    
+    while kill -0 $pid 2>/dev/null; do
+        temp=${spinstr#?}
+        printf " [%s%c%s]  " "$CYAN" "$spinstr" "$RESET"
         local spinstr=$temp${spinstr%"$temp"}
         sleep $delay
         printf "\b\b\b\b\b\b"
@@ -156,19 +275,21 @@ progress_bar() {
     # Color gradient based on progress
     local color=""
     if [ $percentage -lt 25 ]; then
-        color="${RED}"
+        color="$RED"
     elif [ $percentage -lt 50 ]; then
-        color="${YELLOW}"
+        color="$YELLOW"
     elif [ $percentage -lt 75 ]; then
-        color="${CYAN}"
+        color="$CYAN"
     else
-        color="${GREEN}"
+        color="$GREEN"
     fi
     
-    printf "\r${BOLD}${ICON_LIGHTNING} Progress: ${RESET}["
-    printf "${color}%*s${RESET}" $filled | tr ' ' '█'
-    printf "${GRAY}%*s${RESET}" $empty | tr ' ' '░'
-    printf "] ${BOLD}${color}%d%%${RESET} ${ICON_FIRE}" $percentage
+    printf "\r%s%s Progress: %s[" "$BOLD" "$ICON_LIGHTNING" "$RESET"
+    printf "%s" "$color"
+    for ((i=0; i<filled; i++)); do printf "█"; done
+    printf "%s" "$GRAY"
+    for ((i=0; i<empty; i++)); do printf "░"; done
+    printf "%s] %s%s%d%%%s %s" "$RESET" "$BOLD" "$color" "$percentage" "$RESET" "$ICON_FIRE"
 }
 
 # Compare commit SHAs between repos
@@ -177,19 +298,19 @@ compare_commits() {
     local alpha_repo="grayankit/Dartotsu-Downloader"
     
     echo
-    echo -ne "${CYAN}${ICON_ROBOT}${RESET} ${BOLD}Initiating quantum commit analysis${RESET}"
+    echo -ne "%s%s%s %sInitiating quantum commit analysis%s" "$CYAN" "$ICON_ROBOT" "$RESET" "$BOLD" "$RESET"
     for i in {1..5}; do
         sleep 0.3
-        echo -ne "${CYAN}.${RESET}"
+        echo -ne "%s.%s" "$CYAN" "$RESET"
     done
-    echo -e " ${GREEN}${ICON_LIGHTNING}${RESET}"
+    echo -e " %s%s%s" "$GREEN" "$ICON_LIGHTNING" "$RESET"
     
     # Matrix-style loading
-    echo -e "${GREEN}${DIM}> Accessing GitHub API...${RESET}"
+    echo -e "%s%s> Accessing GitHub API...%s" "$GREEN" "$DIM" "$RESET"
     sleep 0.5
-    echo -e "${GREEN}${DIM}> Scanning commit trees...${RESET}"
+    echo -e "%s%s> Scanning commit trees...%s" "$GREEN" "$DIM" "$RESET"
     sleep 0.5
-    echo -e "${GREEN}${DIM}> Cross-referencing SHA hashes...${RESET}"
+    echo -e "%s%s> Cross-referencing SHA hashes...%s" "$GREEN" "$DIM" "$RESET"
     sleep 0.5
     
     # Get data
@@ -207,41 +328,41 @@ compare_commits() {
     local term_width=$(get_terminal_width)
     local box_width=$((term_width > 67 ? 67 : term_width - 2))
     
-    create_border_line $box_width "═" "╔" "╗"
-    create_padded_line "${ICON_CRYSTAL} COMMIT MATRIX ${ICON_CRYSTAL}" $box_width "║"
-    create_border_line $box_width "═" "╠" "╣"
-    create_padded_line "" $box_width "║"
-    create_padded_line "${ICON_GALAXY} ${BOLD}MAIN REPOSITORY${RESET} ${GRAY}(${main_repo})${RESET}" $box_width "║"
-    create_padded_line "${ICON_DIAMOND} Commit SHA: ${YELLOW}${BOLD}${main_commit}${RESET}" $box_width "║"
-    create_padded_line "${ICON_STAR} Author: ${CYAN}${main_author}${RESET}" $box_width "║"
-    create_padded_line "${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo "$main_date")${RESET}" $box_width "║"
-    create_padded_line "" $box_width "║"
-    create_padded_line "${ICON_ALIEN} ${BOLD}ALPHA REPOSITORY${RESET} ${GRAY}(${alpha_repo})${RESET}" $box_width "║"
-    create_padded_line "${ICON_BOMB} Release Tag: ${PURPLE}${BOLD}${alpha_tag}${RESET}" $box_width "║"
-    create_padded_line "${ICON_GHOST} Published: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo "$alpha_date")${RESET}" $box_width "║"
-    create_padded_line "" $box_width "║"
+    create_border_line $box_width "$BOX_H" "$BOX_TL" "$BOX_TR"
+    create_padded_line "$ICON_CRYSTAL COMMIT MATRIX $ICON_CRYSTAL" $box_width "$BOX_V"
+    create_border_line $box_width "$BOX_H" "$BOX_L" "$BOX_R"
+    create_padded_line "" $box_width "$BOX_V"
+    create_padded_line "$ICON_GALAXY ${BOLD}MAIN REPOSITORY${RESET} ${GRAY}(${main_repo})${RESET}" $box_width "$BOX_V"
+    create_padded_line "$ICON_DIAMOND Commit SHA: ${YELLOW}${BOLD}${main_commit}${RESET}" $box_width "$BOX_V"
+    create_padded_line "$ICON_STAR Author: ${CYAN}${main_author}${RESET}" $box_width "$BOX_V"
+    create_padded_line "$ICON_COMET Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo "$main_date")${RESET}" $box_width "$BOX_V"
+    create_padded_line "" $box_width "$BOX_V"
+    create_padded_line "$ICON_ALIEN ${BOLD}ALPHA REPOSITORY${RESET} ${GRAY}(${alpha_repo})${RESET}" $box_width "$BOX_V"
+    create_padded_line "$ICON_BOMB Release Tag: ${PURPLE}${BOLD}${alpha_tag}${RESET}" $box_width "$BOX_V"
+    create_padded_line "$ICON_GHOST Published: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo "$alpha_date")${RESET}" $box_width "$BOX_V"
+    create_padded_line "" $box_width "$BOX_V"
     
     # Sync status with epic effects
     if [[ "$alpha_tag" == *"$main_commit"* ]]; then
-        create_padded_line "${ICON_MAGIC} SYNC STATUS: ${GREEN}${BOLD}${ICON_FIRE} PERFECTLY SYNCHRONIZED ${ICON_FIRE}${RESET}" $box_width "║"
-        create_padded_line "${GREEN}${ICON_LIGHTNING} Repositories are in perfect harmony! ${ICON_LIGHTNING}${RESET}" $box_width "║"
+        create_padded_line "$ICON_MAGIC SYNC STATUS: ${GREEN}${BOLD}${ICON_FIRE} PERFECTLY SYNCHRONIZED ${ICON_FIRE}${RESET}" $box_width "$BOX_V"
+        create_padded_line "${GREEN}${ICON_LIGHTNING} Repositories are in perfect harmony! ${ICON_LIGHTNING}${RESET}" $box_width "$BOX_V"
     else
-        create_padded_line "${ICON_CRYSTAL} SYNC STATUS: ${YELLOW}${BOLD}${ICON_SWORD} DIVERGED TIMELINES ${ICON_SWORD}${RESET}" $box_width "║"
-        create_padded_line "${YELLOW}${ICON_SKULL} Alpha may contain different features ${ICON_SKULL}${RESET}" $box_width "║"
+        create_padded_line "$ICON_CRYSTAL SYNC STATUS: ${YELLOW}${BOLD}${ICON_SWORD} DIVERGED TIMELINES ${ICON_SWORD}${RESET}" $box_width "$BOX_V"
+        create_padded_line "${YELLOW}${ICON_SKULL} Alpha may contain different features ${ICON_SKULL}${RESET}" $box_width "$BOX_V"
     fi
     
-    create_padded_line "" $box_width "║"
-    create_border_line $box_width "═" "╚" "╝"
+    create_padded_line "" $box_width "$BOX_V"
+    create_border_line $box_width "$BOX_H" "$BOX_BL" "$BOX_BR"
     echo
     
     # Cool countdown
-    echo -ne "${BOLD}${CYAN}Preparing alpha download in: ${RESET}"
+    echo -ne "%s%sePreparing alpha download in: %s" "$BOLD" "$CYAN" "$RESET"
     for i in 3 2 1; do
-        echo -ne "${RED}${BOLD}$i${RESET}"
+        echo -ne "%s%s$i%s" "$RED" "$BOLD" "$RESET"
         sleep 0.8
         echo -ne "\b \b"
     done
-    echo -e "${GREEN}${BOLD}GO! ${ICON_ROCKET}${RESET}"
+    echo -e "%s%sGO! %s%s" "$GREEN" "$BOLD" "$ICON_ROCKET" "$RESET"
     echo
 }
 
@@ -267,11 +388,11 @@ show_banner() {
     
     # Animated border effect
     for i in {1..3}; do
-        printf "${GRAD1}"
+        printf "%s" "$GRAD1"
         for ((j=0; j<banner_width; j++)); do
-            printf "═"
+            printf "%s" "$BOX_H"
         done
-        printf "${RESET}\n"
+        printf "%s\n" "$RESET"
         sleep 0.05
         printf "\033[1A\033[K"
     done
@@ -295,7 +416,7 @@ show_banner() {
     local underline_width=$((term_width > 50 ? 50 : term_width - 10))
     printf "${GRAY}                    "
     for ((i=0; i<underline_width; i++)); do
-        printf "═"
+        printf "%s" "$BOX_H"
     done
     printf "${RESET}\n"
     
@@ -312,9 +433,9 @@ section_header() {
     local box_width=$((term_width > 57 ? 57 : term_width - 2))
     
     echo
-    create_border_line $box_width "─" "╭" "╮"
-    create_padded_line "${icon} ${BOLD}${WHITE}${title}${RESET}" $box_width "│"
-    create_border_line $box_width "─" "╰" "╯"
+    create_border_line $box_width "$LIGHT_H" "$LIGHT_TL" "$LIGHT_TR"
+    create_padded_line "$icon ${BOLD}${WHITE}${title}${RESET}" $box_width "$LIGHT_V"
+    create_border_line $box_width "$LIGHT_H" "$LIGHT_BL" "$LIGHT_BR"
     echo
 }
 
@@ -325,10 +446,10 @@ success_msg() {
     local box_width=$((term_width > 54 ? 54 : term_width - 2))
     
     echo
-    create_border_line $box_width "─" "┌" "┐"
-    create_padded_line "${GREEN}${BOLD}SUCCESS!${RESET}" $box_width "│"
-    create_padded_line "${ICON_SUCCESS} ${msg}" $box_width "│"
-    create_border_line $box_width "─" "└" "┘"
+    create_border_line $box_width "$LIGHT_H" "$LIGHT_TL" "$LIGHT_TR"
+    create_padded_line "${GREEN}${BOLD}SUCCESS!${RESET}" $box_width "$LIGHT_V"
+    create_padded_line "$ICON_SUCCESS $msg" $box_width "$LIGHT_V"
+    create_border_line $box_width "$LIGHT_H" "$LIGHT_BL" "$LIGHT_BR"
     echo
 }
 
@@ -339,10 +460,10 @@ error_msg() {
     local box_width=$((term_width > 54 ? 54 : term_width - 2))
     
     echo
-    create_border_line $box_width "─" "┌" "┐"
-    create_padded_line "${RED}${BOLD}ERROR!${RESET}" $box_width "│"
-    create_padded_line "${ICON_ERROR} ${msg}" $box_width "│"
-    create_border_line $box_width "─" "└" "┘"
+    create_border_line $box_width "$LIGHT_H" "$LIGHT_TL" "$LIGHT_TR"
+    create_padded_line "${RED}${BOLD}ERROR!${RESET}" $box_width "$LIGHT_V"
+    create_padded_line "$ICON_ERROR $msg" $box_width "$LIGHT_V"
+    create_border_line $box_width "$LIGHT_H" "$LIGHT_BL" "$LIGHT_BR"
     echo
 }
 
@@ -370,24 +491,24 @@ show_menu() {
     local box_width=$((term_width > 59 ? 59 : term_width - 2))
     
     # Glitch effect header
-    printf "${GRAD1}█${GRAD2}█${GRAD3}█${GRAD4}█${GRAD5}█${GRAD6}█${RESET} ${BOLD}DARTOTSU CONTROL PANEL${RESET} ${GRAD6}█${GRAD5}█${GRAD4}█${GRAD3}█${GRAD2}█${GRAD1}█${RESET}\n"
+    printf "${GRAD1}%s${GRAD2}%s${GRAD3}%s${GRAD4}%s${GRAD5}%s${GRAD6}%s${RESET} ${BOLD}DARTOTSU CONTROL PANEL${RESET} ${GRAD6}%s${GRAD5}%s${GRAD4}%s${GRAD3}%s${GRAD2}%s${GRAD1}%s${RESET}\n" "$BOX_H" "$BOX_H" "$BOX_H" "$BOX_H" "$BOX_H" "$BOX_H" "$BOX_H" "$BOX_H" "$BOX_H" "$BOX_H" "$BOX_H" "$BOX_H"
     echo
     
-    create_border_line $box_width "═" "╔" "╗"
-    create_padded_line "" $box_width "║"
-    create_padded_line "${ICON_ROBOT} ${GREEN}${BOLD}[I]${RESET} ${ICON_DOWNLOAD} Install Dartotsu ${GRAY}(Get Started)${RESET}" $box_width "║"
-    create_padded_line "${GREEN}Deploy the ultimate anime experience${RESET}" $box_width "║"
-    create_padded_line "" $box_width "║"
-    create_padded_line "${ICON_LIGHTNING} ${YELLOW}${BOLD}[U]${RESET} ${ICON_UPDATE} Update Dartotsu ${GRAY}(Stay Current)${RESET}" $box_width "║"
-    create_padded_line "${YELLOW}Upgrade to the latest and greatest${RESET}" $box_width "║"
-    create_padded_line "" $box_width "║"
-    create_padded_line "${ICON_BOMB} ${RED}${BOLD}[R]${RESET} ${ICON_UNINSTALL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}" $box_width "║"
-    create_padded_line "${RED}Complete annihilation of installation${RESET}" $box_width "║"
-    create_padded_line "" $box_width "║"
-    create_padded_line "${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_SPARKLES} Quit ${GRAY}(Escape the Matrix)${RESET}" $box_width "║"
-    create_padded_line "${CYAN}Return to the real world${RESET}" $box_width "║"
-    create_padded_line "" $box_width "║"
-    create_border_line $box_width "═" "╚" "╝"
+    create_border_line $box_width "$BOX_H" "$BOX_TL" "$BOX_TR"
+    create_padded_line "" $box_width "$BOX_V"
+    create_padded_line "$ICON_ROBOT ${GREEN}${BOLD}[I]${RESET} $ICON_DOWNLOAD Install Dartotsu ${GRAY}(Get Started)${RESET}" $box_width "$BOX_V"
+    create_padded_line "${GREEN}Deploy the ultimate anime experience${RESET}" $box_width "$BOX_V"
+    create_padded_line "" $box_width "$BOX_V"
+    create_padded_line "$ICON_LIGHTNING ${YELLOW}${BOLD}[U]${RESET} $ICON_UPDATE Update Dartotsu ${GRAY}(Stay Current)${RESET}" $box_width "$BOX_V"
+    create_padded_line "${YELLOW}Upgrade to the latest and greatest${RESET}" $box_width "$BOX_V"
+    create_padded_line "" $box_width "$BOX_V"
+    create_padded_line "$ICON_BOMB ${RED}${BOLD}[R]${RESET} $ICON_UNINSTALL Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}" $box_width "$BOX_V"
+    create_padded_line "${RED}Complete annihilation of installation${RESET}" $box_width "$BOX_V"
+    create_padded_line "" $box_width "$BOX_V"
+    create_padded_line "$ICON_GHOST ${CYAN}${BOLD}[Q]${RESET} $ICON_SPARKLES Quit ${GRAY}(Escape the Matrix)${RESET}" $box_width "$BOX_V"
+    create_padded_line "${CYAN}Return to the real world${RESET}" $box_width "$BOX_V"
+    create_padded_line "" $box_width "$BOX_V"
+    create_border_line $box_width "$BOX_H" "$BOX_BL" "$BOX_BR"
     echo
     echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/Q)${RESET} ${ICON_MAGIC}: "
 }
@@ -406,18 +527,18 @@ version_menu() {
     echo
     echo
     
-    create_border_line $box_width "═" "╔" "╗"
-    create_padded_line "" $box_width "║"
-    create_padded_line "${ICON_CROWN} ${GREEN}${BOLD}[S]${RESET} Stable Release ${GRAY}(Battle-Tested)${RESET}" $box_width "║"
-    create_padded_line "${ICON_SHIELD} Rock solid, enterprise ready" $box_width "║"
-    create_padded_line "" $box_width "║"
-    create_padded_line "${ICON_LIGHTNING} ${YELLOW}${BOLD}[P]${RESET} Pre-release ${GRAY}(Bleeding Edge)${RESET}" $box_width "║"
-    create_padded_line "${ICON_FIRE} Latest features, some bugs possible" $box_width "║"
-    create_padded_line "" $box_width "║"
-    create_padded_line "${ICON_BOMB} ${PURPLE}${BOLD}[A]${RESET} Alpha Build ${GRAY}(Danger Zone!)${RESET}" $box_width "║"
-    create_padded_line "${ICON_SKULL} Experimental, use at your own risk" $box_width "║"
-    create_padded_line "" $box_width "║"
-    create_border_line $box_width "═" "╚" "╝"
+    create_border_line $box_width "$BOX_H" "$BOX_TL" "$BOX_TR"
+    create_padded_line "" $box_width "$BOX_V"
+    create_padded_line "$ICON_CROWN ${GREEN}${BOLD}[S]${RESET} Stable Release ${GRAY}(Battle-Tested)${RESET}" $box_width "$BOX_V"
+    create_padded_line "$ICON_SHIELD Rock solid, enterprise ready" $box_width "$BOX_V"
+    create_padded_line "" $box_width "$BOX_V"
+    create_padded_line "$ICON_LIGHTNING ${YELLOW}${BOLD}[P]${RESET} Pre-release ${GRAY}(Bleeding Edge)${RESET}" $box_width "$BOX_V"
+    create_padded_line "$ICON_FIRE Latest features, some bugs possible" $box_width "$BOX_V"
+    create_padded_line "" $box_width "$BOX_V"
+    create_padded_line "$ICON_BOMB ${PURPLE}${BOLD}[A]${RESET} Alpha Build ${GRAY}(Danger Zone!)${RESET}" $box_width "$BOX_V"
+    create_padded_line "$ICON_SKULL Experimental, use at your own risk" $box_width "$BOX_V"
+    create_padded_line "" $box_width "$BOX_V"
+    create_border_line $box_width "$BOX_H" "$BOX_BL" "$BOX_BR"
     echo
     echo -ne "${BOLD}${WHITE}Choose your destiny${RESET} ${GRAY}(S/P/A)${RESET} ${ICON_MAGIC}: "
 }
@@ -761,9 +882,9 @@ confirm_installation() {
     local box_width=$((term_width > 59 ? 59 : term_width - 2))
     
     echo
-    create_border_line $box_width "═" "╔" "╗"
-    create_padded_line "${ICON_SECURITY} SECURITY CHECKPOINT ${ICON_SECURITY}" $box_width "║"
-    create_border_line $box_width "═" "╚" "╝"
+    create_border_line $box_width "$BOX_H" "$BOX_TL" "$BOX_TR"
+    create_padded_line "$ICON_SECURITY SECURITY CHECKPOINT $ICON_SECURITY" $box_width "$BOX_V"
+    create_border_line $box_width "$BOX_H" "$BOX_BL" "$BOX_BR"
     echo
     security_msg "Download completed successfully!"
     echo
@@ -822,7 +943,7 @@ offer_content_review() {
 }
 
 install_app() {
-    section_header "INSTALLATION PROCESS" "${ICON_INSTALL}"
+    section_header "INSTALLATION PROCESS" "$ICON_INSTALL"
     
     # Check dependencies with enhanced system
     info_msg "Checking system dependencies..."
@@ -988,7 +1109,7 @@ EOL
 }
 
 uninstall_app() {
-    section_header "UNINSTALLATION PROCESS" "${ICON_UNINSTALL}"
+    section_header "UNINSTALLATION PROCESS" "$ICON_UNINSTALL"
     
     if [ ! -d "$INSTALL_DIR" ] && [ ! -L "$LINK" ]; then
         warn_msg "$APP_NAME doesn't appear to be installed!"
@@ -1014,11 +1135,11 @@ uninstall_app() {
     info_msg "Removing $APP_NAME components..."
     
     # Remove components
-    [ -L "$LINK" ] && rm -f "$LINK" && echo -e "  ${GREEN}✓${RESET} Executable symlink removed"
-    [ -d "$INSTALL_DIR" ] && rm -rf "$INSTALL_DIR" && echo -e "  ${GREEN}✓${RESET} Installation directory removed"
-    [ -f "$DESKTOP_FILE" ] && rm -f "$DESKTOP_FILE" && echo -e "  ${GREEN}✓${RESET} Desktop entry removed"
-    [ -f "$ICON_FILE" ] && rm -f "$ICON_FILE" && echo -e "  ${GREEN}✓${RESET} Icon removed"
-    [ -d "$INSTALL_DIR.backup" ] && rm -rf "$INSTALL_DIR.backup" && echo -e "  ${GREEN}✓${RESET} Backup directory removed"
+    [ -L "$LINK" ] && rm -f "$LINK" && echo -e "  ${GREEN}${ICON_SUCCESS}${RESET} Executable symlink removed"
+    [ -d "$INSTALL_DIR" ] && rm -rf "$INSTALL_DIR" && echo -e "  ${GREEN}${ICON_SUCCESS}${RESET} Installation directory removed"
+    [ -f "$DESKTOP_FILE" ] && rm -f "$DESKTOP_FILE" && echo -e "  ${GREEN}${ICON_SUCCESS}${RESET} Desktop entry removed"
+    [ -f "$ICON_FILE" ] && rm -f "$ICON_FILE" && echo -e "  ${GREEN}${ICON_SUCCESS}${RESET} Icon removed"
+    [ -d "$INSTALL_DIR.backup" ] && rm -rf "$INSTALL_DIR.backup" && echo -e "  ${GREEN}${ICON_SUCCESS}${RESET} Backup directory removed"
     
     if command -v update-desktop-database >/dev/null 2>&1; then
         update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
@@ -1033,7 +1154,7 @@ uninstall_app() {
 }
 
 update_app() {
-    section_header "UPDATE PROCESS" "${ICON_UPDATE}"
+    section_header "UPDATE PROCESS" "$ICON_UPDATE"
     
     if [ ! -d "$INSTALL_DIR" ] && [ ! -L "$LINK" ]; then
         warn_msg "$APP_NAME doesn't appear to be installed!"
@@ -1081,7 +1202,7 @@ main_loop() {
                 ;;
             q|quit|exit)
                 echo
-                type_text "Thanks for using Dartotsu Installer! ${ICON_SPARKLES}" 0.05
+                type_text "Thanks for using Dartotsu Installer! $ICON_SPARKLES" 0.05
                 echo -e "${GRAY}${DIM}Goodbye!${RESET}"
                 exit 0
                 ;;
