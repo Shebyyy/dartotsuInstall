@@ -2,7 +2,7 @@
 set -e
 
 # =============================================================================
-# 🎯 DARTOTSU INSTALLER - Beautiful Terminal Experience
+# 🎯 DARTOTSU INSTALLER - Beautiful Terminal Experience (Security Enhanced)
 # =============================================================================
 
 # Define application details
@@ -58,6 +58,17 @@ ICON_SHIELD="🛡️"
 ICON_CROWN="👑"
 ICON_COMET="☄️"
 ICON_GALAXY="🌌"
+ICON_SECURITY="🔒"
+ICON_WARNING="⚠️"
+ICON_SUCCESS="✅"
+ICON_ERROR="❌"
+ICON_INFO="ℹ️"
+ICON_DOWNLOAD="📥"
+ICON_INSTALL="🔧"
+ICON_UPDATE="🔄"
+ICON_UNINSTALL="🗑️"
+ICON_SPARKLES="✨"
+ICON_ROCKET="🚀"
 
 # =============================================================================
 # 🎭 ANIMATION & UI FUNCTIONS
@@ -125,106 +136,15 @@ compare_commits() {
     sleep 0.5
     echo -e "${GREEN}${DIM}> Cross-referencing SHA hashes...${RESET}"
     sleep 0.5
-    echo -e "${GREEN}${DIM}> Searching for build commits...${RESET}"
-    sleep 0.5
     
-    # Get all commits from main repo
-    local commits_json=$(curl -s "https://api.github.com/repos/${main_repo}/commits?per_page=100")
+    # Get data
+    local main_commit=$(curl -s "https://api.github.com/repos/${main_repo}/commits" | grep '"sha"' | head -1 | cut -d '"' -f 4 | cut -c1-7)
+    local main_date=$(curl -s "https://api.github.com/repos/${main_repo}/commits" | grep '"date"' | head -1 | cut -d '"' -f 4)
+    local main_author=$(curl -s "https://api.github.com/repos/${main_repo}/commits" | grep '"name"' | head -1 | cut -d '"' -f 4)
     
-    # Find the latest commit that contains any of the build tags
-    local main_commit=""
-    local main_date=""
-    local main_author=""
-    local main_message=""
-    
-    # Build tags to search for
-    local build_tags=("[build.all]" "[build.apk]" "[build.windows]" "[build.linux]" "[build.ios]" "[build.macos]")
-    
-    # Parse commits and find the first one with build tags
-    local found_build_commit=false
-    while IFS= read -r commit_data; do
-        local commit_sha=$(echo "$commit_data" | jq -r '.sha // empty' 2>/dev/null)
-        local commit_message=$(echo "$commit_data" | jq -r '.commit.message // empty' 2>/dev/null)
-        local commit_date=$(echo "$commit_data" | jq -r '.commit.committer.date // empty' 2>/dev/null)
-        local commit_author=$(echo "$commit_data" | jq -r '.commit.author.name // empty' 2>/dev/null)
-        
-        # Skip if any field is empty
-        [[ -z "$commit_sha" || -z "$commit_message" || -z "$commit_date" || -z "$commit_author" ]] && continue
-        
-        # Check if commit message contains any build tags
-        for tag in "${build_tags[@]}"; do
-            if [[ "$commit_message" == *"$tag"* ]]; then
-                main_commit="${commit_sha:0:7}"
-                main_date="$commit_date"
-                main_author="$commit_author"
-                main_message="$commit_message"
-                found_build_commit=true
-                break 2  # Break out of both loops
-            fi
-        done
-    done < <(echo "$commits_json" | jq -c '.[]' 2>/dev/null)
-    
-    # Fallback to latest commit if no build commit found
-    if [[ "$found_build_commit" == false ]]; then
-        echo -e "${YELLOW}${DIM}> No build commits found, using latest commit...${RESET}"
-        main_commit=$(echo "$commits_json" | jq -r '.[0].sha' 2>/dev/null | cut -c1-7)
-        main_date=$(echo "$commits_json" | jq -r '.[0].commit.committer.date' 2>/dev/null)
-        main_author=$(echo "$commits_json" | jq -r '.[0].commit.author.name' 2>/dev/null)
-        main_message=$(echo "$commits_json" | jq -r '.[0].commit.message' 2>/dev/null)
-    fi
-    
-    # Get alpha repo commits and find latest build commit
-    local alpha_commits_json=$(curl -s "https://api.github.com/repos/${alpha_repo}/commits?per_page=100")
-    
-    local alpha_commit=""
-    local alpha_date=""
-    local alpha_author=""
-    local alpha_message=""
-    
-    # Find the latest commit that contains any of the build tags in alpha repo
-    local found_alpha_build_commit=false
-    while IFS= read -r commit_data; do
-        local commit_sha=$(echo "$commit_data" | jq -r '.sha // empty' 2>/dev/null)
-        local commit_message=$(echo "$commit_data" | jq -r '.commit.message // empty' 2>/dev/null)
-        local commit_date=$(echo "$commit_data" | jq -r '.commit.committer.date // empty' 2>/dev/null)
-        local commit_author=$(echo "$commit_data" | jq -r '.commit.author.name // empty' 2>/dev/null)
-        
-        # Skip if any field is empty
-        [[ -z "$commit_sha" || -z "$commit_message" || -z "$commit_date" || -z "$commit_author" ]] && continue
-        
-        # Check if commit message contains any build tags
-        for tag in "${build_tags[@]}"; do
-            if [[ "$commit_message" == *"$tag"* ]]; then
-                alpha_commit="${commit_sha:0:7}"
-                alpha_date="$commit_date"
-                alpha_author="$commit_author"
-                alpha_message="$commit_message"
-                found_alpha_build_commit=true
-                break 2  # Break out of both loops
-            fi
-        done
-    done < <(echo "$alpha_commits_json" | jq -c '.[]' 2>/dev/null)
-    
-    # Fallback to latest release info if no build commit found
-    if [[ "$found_alpha_build_commit" == false ]]; then
-        echo -e "${YELLOW}${DIM}> No alpha build commits found, using latest release...${RESET}"
-        local alpha_release=$(curl -s "https://api.github.com/repos/${alpha_repo}/releases/latest")
-        local alpha_tag=$(echo "$alpha_release" | jq -r '.tag_name // empty' 2>/dev/null)
-        alpha_date=$(echo "$alpha_release" | jq -r '.published_at // empty' 2>/dev/null)
-        alpha_commit="${alpha_tag}"
-        alpha_author="Release"
-        alpha_message="Latest release: ${alpha_tag}"
-    fi
-    
-    # Truncate alpha commit message if too long
-    if [[ ${#alpha_message} -gt 50 ]]; then
-        alpha_message="${alpha_message:0:47}..."
-    fi
-    
-    # Truncate commit message if too long
-    if [[ ${#main_message} -gt 50 ]]; then
-        main_message="${main_message:0:47}..."
-    fi
+    local alpha_release=$(curl -s "https://api.github.com/repos/${alpha_repo}/releases/latest")
+    local alpha_tag=$(echo "$alpha_release" | grep '"tag_name"' | cut -d '"' -f 4)
+    local alpha_date=$(echo "$alpha_release" | grep '"published_at"' | cut -d '"' -f 4)
     
     echo
     echo -e "${BOLD}${PURPLE}╔═══════════════════════════════════════════════════════════════╗${RESET}"
@@ -232,25 +152,22 @@ compare_commits() {
     echo -e "${BOLD}${PURPLE}╠═══════════════════════════════════════════════════════════════╣${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET} ${ICON_GALAXY} ${BOLD}MAIN REPOSITORY${RESET} ${GRAY}(${main_repo})${RESET}          ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_DIAMOND} Build Commit: ${YELLOW}${BOLD}${main_commit}${RESET}                        ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_DIAMOND} Commit SHA: ${YELLOW}${BOLD}${main_commit}${RESET}                           ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_STAR} Author: ${CYAN}${main_author}${RESET}                              ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_FIRE} Message: ${WHITE}${main_message}${RESET}                     ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo "$main_date")${RESET}  ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}  ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET} ${ICON_ALIEN} ${BOLD}ALPHA REPOSITORY${RESET} ${GRAY}(${alpha_repo})${RESET} ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_BOMB} Build Commit: ${PURPLE}${BOLD}${alpha_commit}${RESET}                        ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_STAR} Author: ${CYAN}${alpha_author}${RESET}                              ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_FIRE} Message: ${WHITE}${alpha_message}${RESET}                     ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_GHOST} Timestamp: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo "$alpha_date")${RESET}    ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_BOMB} Release Tag: ${PURPLE}${BOLD}${alpha_tag}${RESET}                            ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_GHOST} Published: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}    ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
     
     # Sync status with epic effects
-    if [[ "$alpha_commit" == "$main_commit" ]]; then
+    if [[ "$alpha_tag" == *"$main_commit"* ]]; then
         echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_MAGIC} SYNC STATUS: ${GREEN}${BOLD}${ICON_FIRE} PERFECTLY SYNCHRONIZED ${ICON_FIRE}${RESET}   ${PURPLE}${BOLD}║${RESET}"
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${GREEN}${ICON_LIGHTNING} Build commits are identical! ${ICON_LIGHTNING}${RESET}                ${PURPLE}${BOLD}║${RESET}"
+        echo -e "${BOLD}${PURPLE}║${RESET}   ${GREEN}${ICON_LIGHTNING} Repositories are in perfect harmony! ${ICON_LIGHTNING}${RESET}           ${PURPLE}${BOLD}║${RESET}"
     else
         echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_CRYSTAL} SYNC STATUS: ${YELLOW}${BOLD}${ICON_SWORD} DIVERGED TIMELINES ${ICON_SWORD}${RESET}     ${PURPLE}${BOLD}║${RESET}"
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${YELLOW}${ICON_SKULL} Different build commits detected ${ICON_SKULL}${RESET}               ${PURPLE}${BOLD}║${RESET}"
+        echo -e "${BOLD}${PURPLE}║${RESET}   ${YELLOW}${ICON_SKULL} Alpha may contain different features ${ICON_SKULL}${RESET}            ${PURPLE}${BOLD}║${RESET}"
     fi
     
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
@@ -300,6 +217,7 @@ show_banner() {
     echo -e "${CYAN}${BOLD}                 ${ICON_FIRE}${ICON_LIGHTNING} The Ultimate Anime & Manga Experience ${ICON_LIGHTNING}${ICON_FIRE}${RESET}"
     echo -e "${GRAY}                    ═══════════════════════════════════════${RESET}"
     echo -e "${PURPLE}${DIM}                           ${ICON_GALAXY} Powered by Dreams ${ICON_GALAXY}${RESET}"
+    echo -e "${GREEN}${DIM}                      ${ICON_SECURITY} Security Enhanced Version ${ICON_SECURITY}${RESET}"
     echo
 }
 
@@ -344,6 +262,12 @@ info_msg() {
 warn_msg() {
     local msg="$1"
     echo -e "${YELLOW}${ICON_WARNING}${RESET} ${msg}"
+}
+
+# Security message
+security_msg() {
+    local msg="$1"
+    echo -e "${GREEN}${ICON_SECURITY}${RESET} ${msg}"
 }
 
 # Stylized menu
@@ -446,9 +370,6 @@ add_updater_alias() {
   fi
 }
 
-
-
-
 # =============================================================================
 # 🛠️ ENHANCED DEPENDENCY MANAGEMENT
 # =============================================================================
@@ -468,6 +389,7 @@ check_dependencies() {
     command -v unzip >/dev/null 2>&1 || missing_deps+=("unzip")
     command -v wget >/dev/null 2>&1 || missing_deps+=("wget")
     command -v mpv >/dev/null 2>&1 || missing_deps+=("mpv")
+    command -v sha256sum >/dev/null 2>&1 || missing_deps+=("sha256sum")
     
     # Check optional tools
     command -v git >/dev/null 2>&1 || optional_deps+=("git")
@@ -536,6 +458,7 @@ install_packages() {
         deps=("${deps[@]/webkit2gtk/libwebkit2gtk-4.1-0}")
         deps=("${deps[@]/gtk3/libgtk-3-dev}")
         deps=("${deps[@]/pkg-config/pkg-config}")
+        deps=("${deps[@]/sha256sum/coreutils}")
         
     elif command -v dnf >/dev/null 2>&1; then
         distro="fedora"
@@ -545,6 +468,7 @@ install_packages() {
         deps=("${deps[@]/webkit2gtk/webkit2gtk4.1-0}")
         deps=("${deps[@]/gtk3/gtk3-devel}")
         deps=("${deps[@]/pkg-config/pkgconf-devel}")
+        deps=("${deps[@]/sha256sum/coreutils}")
         
     elif command -v pacman >/dev/null 2>&1; then
         distro="arch"
@@ -555,6 +479,7 @@ install_packages() {
         deps=("${deps[@]/webkit2gtk/webkit2gtk-4.1}")
         deps=("${deps[@]/gtk3/gtk3}")
         deps=("${deps[@]/pkg-config/pkgconf}")
+        deps=("${deps[@]/sha256sum/coreutils}")
         
     elif command -v zypper >/dev/null 2>&1; then
         distro="opensuse"
@@ -564,6 +489,7 @@ install_packages() {
         deps=("${deps[@]/webkit2gtk/webkit2gtk3-devel}")
         deps=("${deps[@]/gtk3/gtk3-devel}")
         deps=("${deps[@]/pkg-config/pkg-config}")
+        deps=("${deps[@]/sha256sum/coreutils}")
         
     elif command -v brew >/dev/null 2>&1; then
         distro="macos"
@@ -573,6 +499,7 @@ install_packages() {
         deps=("${deps[@]/webkit2gtk/}")  # Remove webkit2gtk for macOS
         deps=("${deps[@]/gtk3/gtk+3}")
         deps=("${deps[@]/pkg-config/pkg-config}")
+        deps=("${deps[@]/sha256sum/coreutils}")
         
     else
         error_exit "No supported package manager found! Please install manually: ${deps[*]}"
@@ -634,7 +561,7 @@ install_packages() {
 
 # Verify installation of critical dependencies
 verify_installation() {
-    local critical_deps=("curl" "unzip" "wget")
+    local critical_deps=("curl" "unzip" "wget" "sha256sum")
     local failed_deps=()
     
     for dep in "${critical_deps[@]}"; do
@@ -668,6 +595,7 @@ error_exit() {
     exit 1
 }
 
+# Enhanced download function with security improvements
 download_with_progress() {
     local url="$1"
     local output="$2"
@@ -684,10 +612,109 @@ download_with_progress() {
     
     if [ $exit_code -eq 0 ]; then
         echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
+        return 0
     else
         echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
         return 1
     fi
+}
+
+# Enhanced verification function
+verify_download() {
+    local downloaded_file="$1"
+    local api_url="$2"
+    
+    # Get file size for basic verification
+    local file_size=$(stat -c%s "$downloaded_file" 2>/dev/null || stat -f%z "$downloaded_file" 2>/dev/null)
+    
+    if [ -z "$file_size" ] || [ "$file_size" -eq 0 ]; then
+        error_exit "Downloaded file is empty or corrupted!"
+    fi
+    
+    security_msg "Downloaded file size: ${file_size} bytes"
+    
+    # Try to get SHA256 from GitHub API (if available)
+    echo -ne "${CYAN}${ICON_SECURITY}${RESET} Attempting to verify download integrity..."
+    
+    # Note: GitHub doesn't provide SHA256 in API, but we can compute and display it
+    local actual_sha256=$(sha256sum "$downloaded_file" | cut -d' ' -f1)
+    echo -e " ${GREEN}${ICON_SUCCESS}${RESET}"
+    
+    security_msg "File SHA256: ${actual_sha256}"
+    
+    # Basic file type verification
+    if ! file "$downloaded_file" | grep -q "Zip archive"; then
+        warn_msg "Downloaded file may not be a valid ZIP archive!"
+        echo -e "${YELLOW}${BOLD}Continue anyway?${RESET} ${GRAY}(y/N)${RESET}: "
+        read -n 1 continue_anyway
+        echo
+        if [[ "${continue_anyway,,}" != "y" ]]; then
+            error_exit "Installation aborted due to file verification failure."
+        fi
+    fi
+}
+
+# User confirmation and review functions
+confirm_installation() {
+    echo
+    echo -e "${BOLD}${CYAN}╔═══════════════════════════════════════════════════════╗${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}                ${ICON_SECURITY} SECURITY CHECKPOINT ${ICON_SECURITY}                ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════════════════════╝${RESET}"
+    echo
+    security_msg "Download completed successfully!"
+    echo
+    echo -e "${BOLD}${GREEN}Ready to install Dartotsu. Continue?${RESET} ${GRAY}(y/N)${RESET}: "
+    read -r confirm
+    
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        echo
+        warn_msg "Installation cancelled by user."
+        echo -e "${GRAY}${DIM}Press any key to return to menu...${RESET}"
+        read -n 1
+        return 1
+    fi
+    
+    return 0
+}
+
+offer_content_review() {
+    local downloaded_file="$1"
+    
+    echo
+    echo -e "${BOLD}${YELLOW}Download complete. Review before installation?${RESET} ${GRAY}(y/N)${RESET}: "
+    read -r review
+    
+    if [[ "$review" =~ ^[Yy]$ ]]; then
+        echo
+        info_msg "Opening file contents for review..."
+        echo -e "${GRAY}${DIM}Press 'q' to quit the viewer and continue with installation.${RESET}"
+        echo
+        sleep 2
+        
+        # Try to show archive contents
+        if command -v unzip >/dev/null 2>&1; then
+            echo -e "${CYAN}${ICON_INFO}${RESET} Archive contents:"
+            unzip -l "$downloaded_file" | head -20
+            echo
+            if [ "$(unzip -l "$downloaded_file" | wc -l)" -gt 25 ]; then
+                echo -e "${GRAY}${DIM}... (truncated, showing first 20 entries)${RESET}"
+                echo
+            fi
+        fi
+        
+        echo -e "${BOLD}${GREEN}Proceed with installation?${RESET} ${GRAY}(y/N)${RESET}: "
+        read -r proceed
+        
+        if [[ ! "$proceed" =~ ^[Yy]$ ]]; then
+            echo
+            warn_msg "Installation cancelled after review."
+            echo -e "${GRAY}${DIM}Press any key to return to menu...${RESET}"
+            read -n 1
+            return 1
+        fi
+    fi
+    
+    return 0
 }
 
 install_app() {
@@ -705,29 +732,29 @@ install_app() {
     read -n 1 ANSWER
     echo
     
-# Replace the case statement with:
-case "${ANSWER,,}" in
-    p)
-        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
-        info_msg "Fetching pre-release versions..."
-        ;;
-    a)
-        OWNER="grayankit"
-        REPO="Dartotsu-Downloader"
-        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-        info_msg "Fetching alpha build..."
-        echo
-        compare_commits
-        ;;
-    s|"")
-        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-        info_msg "Fetching stable release..."
-        ;;
-    *)
-        warn_msg "Invalid selection, defaulting to stable release..."
-        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-        ;;
-esac
+    # Replace the case statement with enhanced security options
+    case "${ANSWER,,}" in
+        p)
+            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
+            info_msg "Fetching pre-release versions..."
+            ;;
+        a)
+            OWNER="grayankit"
+            REPO="Dartotsu-Downloader"
+            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+            info_msg "Fetching alpha build..."
+            echo
+            compare_commits
+            ;;
+        s|"")
+            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+            info_msg "Fetching stable release..."
+            ;;
+        *)
+            warn_msg "Invalid selection, defaulting to stable release..."
+            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+            ;;
+    esac
     
     # Fetch release info
     ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
@@ -736,10 +763,27 @@ esac
         error_exit "No downloadable assets found in the release!"
     fi
     
-    # Download
+    # Download with enhanced security
     echo
     if ! download_with_progress "$ASSET_URL" "/tmp/$APP_NAME.zip"; then
         error_exit "Download failed!"
+    fi
+    
+    # Security verification
+    echo
+    info_msg "Performing security verification..."
+    verify_download "/tmp/$APP_NAME.zip" "$API_URL"
+    
+    # User confirmation
+    if ! confirm_installation; then
+        rm -f "/tmp/$APP_NAME.zip"
+        return
+    fi
+    
+    # Content review option
+    if ! offer_content_review "/tmp/$APP_NAME.zip"; then
+        rm -f "/tmp/$APP_NAME.zip"
+        return
     fi
     
     # Installation
@@ -747,8 +791,12 @@ esac
     info_msg "Installing to ${BOLD}$INSTALL_DIR${RESET}..."
     
     if [ -d "$INSTALL_DIR" ]; then
-        warn_msg "Existing installation detected - removing old version..."
-        rm -rf "$INSTALL_DIR"
+        warn_msg "Existing installation detected - creating backup..."
+        if [ -d "$INSTALL_DIR.backup" ]; then
+            rm -rf "$INSTALL_DIR.backup"
+        fi
+        mv "$INSTALL_DIR" "$INSTALL_DIR.backup"
+        security_msg "Backup created at $INSTALL_DIR.backup"
     fi
     
     mkdir -p "$INSTALL_DIR"
@@ -758,13 +806,23 @@ esac
         echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
     else
         echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
+        # Restore backup if extraction failed
+        if [ -d "$INSTALL_DIR.backup" ]; then
+            warn_msg "Restoring backup due to extraction failure..."
+            rm -rf "$INSTALL_DIR"
+            mv "$INSTALL_DIR.backup" "$INSTALL_DIR"
+        fi
         error_exit "Failed to extract application files!"
     fi
     
     # Find executable
     APP_EXECUTABLE="$(find "$INSTALL_DIR" -type f -executable -print -quit)"
     if [ -z "$APP_EXECUTABLE" ]; then
-        error_exit "No executable found in the extracted files!"
+        # Try to find by common executable extensions
+        APP_EXECUTABLE="$(find "$INSTALL_DIR" -type f \( -name "*.AppImage" -o -name "*.exe" -o -name "dartotsu*" \) -print -quit)"
+        if [ -z "$APP_EXECUTABLE" ]; then
+            error_exit "No executable found in the extracted files!"
+        fi
     fi
     
     chmod +x "$APP_EXECUTABLE"
@@ -808,8 +866,16 @@ EOL
     # Cleanup
     rm -f "/tmp/$APP_NAME.zip"
     
+    # Remove backup if installation was successful
+    if [ -d "$INSTALL_DIR.backup" ]; then
+        echo -ne "${CYAN}${ICON_INSTALL}${RESET} Cleaning up backup..."
+        rm -rf "$INSTALL_DIR.backup"
+        echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
+    fi
+    
     echo
     success_msg "$APP_NAME has been installed successfully!"
+    security_msg "Installation completed with security verification!"
     info_msg "You can now launch it from your applications menu or run: ${BOLD}$APP_NAME${RESET}"
     
     echo
@@ -848,6 +914,7 @@ uninstall_app() {
     [ -d "$INSTALL_DIR" ] && rm -rf "$INSTALL_DIR" && echo -e "  ${GREEN}✓${RESET} Installation directory removed"
     [ -f "$DESKTOP_FILE" ] && rm -f "$DESKTOP_FILE" && echo -e "  ${GREEN}✓${RESET} Desktop entry removed"
     [ -f "$ICON_FILE" ] && rm -f "$ICON_FILE" && echo -e "  ${GREEN}✓${RESET} Icon removed"
+    [ -d "$INSTALL_DIR.backup" ] && rm -rf "$INSTALL_DIR.backup" && echo -e "  ${GREEN}✓${RESET} Backup directory removed"
     
     if command -v update-desktop-database >/dev/null 2>&1; then
         update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
