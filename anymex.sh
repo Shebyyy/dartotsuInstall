@@ -243,7 +243,7 @@ detect_shell_rc() {
 add_updater_alias() {
     local shell_rc
     shell_rc=$(detect_shell_rc)
-    local alias_line="alias anymex-updater='bash <(curl -s https://raw.githubusercontent.com/RyanYuuki/AnymeX/main/install.sh) update'"
+    local alias_line="alias anymex-updater='bash <(curl -s https://raw.githubusercontent.com/Shebyyy/dartotsuInstall/refs/heads/main/anymex.sh) update'"
 
     if grep -Fxq "$alias_line" "$shell_rc" 2>/dev/null; then
         echo -ne "${YELLOW}${ICON_SWORD}${RESET} The 'anymex-updater' alias already exists in $(basename "$shell_rc"). Remove it? [y/N]: "
