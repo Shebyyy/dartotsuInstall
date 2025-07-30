@@ -566,6 +566,7 @@ Exec=$LINK
 Icon=$ICON_FILE
 Type=Application
 Categories=AudioVideo;Utility;
+MimeType=x-scheme-handler/dar;x-scheme-handler/anymex;x-scheme-handler/sugoireads;x-scheme-handler/mangayomi;
 EOL
     chmod +x "$DESKTOP_FILE"
     
