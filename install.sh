@@ -58,16 +58,6 @@ ICON_SHIELD="🛡️"
 ICON_CROWN="👑"
 ICON_COMET="☄️"
 ICON_GALAXY="🌌"
-ICON_DOWNLOAD="📥"
-ICON_INSTALL="🛠️"
-ICON_UNINSTALL="🗑️"
-ICON_UPDATE="🔄"
-ICON_SPARKLES="✨"
-ICON_SUCCESS="✅"
-ICON_ERROR="❌"
-ICON_INFO="ℹ️"
-ICON_WARNING="⚠️"
-ICON_ROCKET="🚀"
 
 # =============================================================================
 # 🎭 ANIMATION & UI FUNCTIONS
@@ -113,83 +103,6 @@ progress_bar() {
     printf "${color}%*s${RESET}" $filled | tr ' ' '█'
     printf "${GRAY}%*s${RESET}" $empty | tr ' ' '░'
     printf "] ${BOLD}${color}%d%%${RESET} ${ICON_FIRE}" $percentage
-}
-
-# <<< FINAL FIXED FUNCTION: Moving border animation >>>
-# This version is the most robust. It checks for terminal compatibility before running.
-animated_box_start() {
-    # --- Compatibility Check ---
-    # 1. Check if the terminal knows basic cursor movement capabilities. If not, exit silently.
-    #    This prevents all 'tput' errors on very basic terminals (like TERM=dumb).
-    if ! tput cup >/dev/null 2>&1 || ! tput civis >/dev/null 2>&1 || ! tput cnorm >/dev/null 2>&1; then
-        exit 0
-    fi
-
-    local content="$1"
-    local width=0
-    local height=0
-    local line
-
-    mapfile -t lines <<< "$content"
-    height=${#lines[@]}
-    for line in "${lines[@]}"; do
-        local stripped_line
-        stripped_line=$(echo -e "$line" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g')
-        if (( ${#stripped_line} > width )); then
-            width=${#stripped_line}
-        fi
-    done
-
-    local box_w=$((width + 4))
-    local box_h=$((height + 2))
-
-    # --- Robust Cursor Position Detection ---
-    local term_response
-    local start_row
-    # 2. Ask terminal for cursor position with a very short timeout.
-    if read -s -r -t 0.2 -d R -p $'\E[6n' term_response && [[ "$term_response" == *";"* ]]; then
-        start_row="${term_response#*\[}"
-        start_row="${start_row%%;*}"
-    fi
-
-    # 3. Final validation. If we still don't have a valid number, exit silently.
-    if ! [[ "$start_row" =~ ^[0-9]+$ ]]; then
-        exit 0
-    fi
-
-    # If we got this far, the terminal is compatible. Proceed with animation.
-    tput civis # Hide cursor
-
-    ( # Start animation in a subshell
-        trap 'tput cnorm; exit' SIGINT SIGTERM
-        local frame=0
-        local spin='- \ | /'
-
-        while true; do
-            local char1=${spin:$((frame % 8)):1}
-            local char2=${spin:$(((frame + 2) % 8)):1}
-            local char3=${spin:$(((frame + 4) % 8)):1}
-            local char4=${spin:$(((frame + 6) % 8)):1}
-
-            # Use absolute positioning ('cup') for all drawing to avoid unexpected line wraps.
-            tput cup "$start_row" 0; echo -ne "${CYAN}${BOLD}${char1}"
-            for ((i=0; i<box_w-2; i++)); do echo -n "─"; done
-            echo -e "${char2}${RESET}"
-
-            tput cup "$((start_row + box_h - 1))" 0; echo -ne "${CYAN}${BOLD}${char3}"
-            for ((i=0; i<box_w-2; i++)); do echo -n "─"; done
-            echo -e "${char4}${RESET}"
-
-            for ((i=1; i<box_h-1; i++)); do
-                tput cup "$((start_row + i))" 0; echo -ne "${CYAN}${BOLD}│${RESET}"
-                tput cup "$((start_row + i))" "$((box_w - 1))"; echo -ne "${CYAN}${BOLD}│${RESET}"
-            done
-
-            ((frame++))
-            sleep 0.15
-        done
-    ) &
-    echo $! # Return the PID of the animation
 }
 
 # Compare commit SHAs between repos
@@ -339,25 +252,28 @@ warn_msg() {
     echo -e "${YELLOW}${ICON_WARNING}${RESET} ${msg}"
 }
 
-# Stylized menu (returns content as a string)
-get_menu_content() {
-    cat <<-EOF
-${BOLD}${CYAN}╔═══════════════════════════════════════════════════════╗${RESET}
-${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${GREEN}${BOLD}[I]${RESET} ${ICON_DOWNLOAD} Install Dartotsu ${GRAY}(Get Started)${RESET}      ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}║${RESET}      ${GREEN}Deploy the ultimate anime experience${RESET}        ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}║${RESET}  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[U]${RESET} ${ICON_UPDATE} Update Dartotsu ${GRAY}(Stay Current)${RESET}     ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}║${RESET}      ${YELLOW}Upgrade to the latest and greatest${RESET}         ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}║${RESET}  ${ICON_BOMB} ${RED}${BOLD}[R]${RESET} ${ICON_UNINSTALL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}   ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}║${RESET}      ${RED}Complete annihilation of installation${RESET}       ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}║${RESET}  ${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_SPARKLES} Quit ${GRAY}(Escape the Matrix)${RESET}            ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}║${RESET}      ${CYAN}Return to the real world${RESET}                   ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}
-${BOLD}${CYAN}╚═══════════════════════════════════════════════════════╝${RESET}
-EOF
+# Stylized menu
+show_menu() {
+    # Glitch effect
+    echo -e "${GRAD1}█${GRAD2}█${GRAD3}█${GRAD4}█${GRAD5}█${GRAD6}█${RESET} ${BOLD}DARTOTSU CONTROL PANEL${RESET} ${GRAD6}█${GRAD5}█${GRAD4}█${GRAD3}█${GRAD2}█${GRAD1}█${RESET}"
+    echo
+    echo -e "${BOLD}${CYAN}╔═══════════════════════════════════════════════════════╗${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${GREEN}${BOLD}[I]${RESET} ${ICON_DOWNLOAD} Install Dartotsu ${GRAY}(Get Started)${RESET}      ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}      ${GREEN}Deploy the ultimate anime experience${RESET}        ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[U]${RESET} ${ICON_UPDATE} Update Dartotsu ${GRAY}(Stay Current)${RESET}     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}      ${YELLOW}Upgrade to the latest and greatest${RESET}         ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_BOMB} ${RED}${BOLD}[R]${RESET} ${ICON_UNINSTALL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}   ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}      ${RED}Complete annihilation of installation${RESET}       ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_SPARKLES} Quit ${GRAY}(Escape the Matrix)${RESET}            ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}      ${CYAN}Return to the real world${RESET}                   ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
+    echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════════════════════╝${RESET}"
+    echo
+    echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/Q)${RESET} ${ICON_MAGIC}: "
 }
 
 # Version selection menu
@@ -695,6 +611,7 @@ install_app() {
     read -rn 1 ANSWER
     echo
 
+# Replace the case statement with:
 case "${ANSWER,,}" in
     p)
         API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
@@ -881,56 +798,11 @@ update_app() {
 # 🚀 MAIN SCRIPT
 # =============================================================================
 
-# <<< MODIFIED MAIN LOOP for Graceful Degradation >>>
 main_loop() {
-    # Ensure cursor is visible and screen is clear on exit, even if user presses Ctrl+C
-    trap 'tput cnorm &>/dev/null; clear; exit 1' SIGINT
-
     while true; do
         show_banner
-        local menu_content
-        menu_content=$(get_menu_content)
-
-        # Save the cursor's current position before doing anything that might move it.
-        tput sc
-
-        # Attempt to start the animation. This will return a PID on success
-        # or an empty string on failure (in an incompatible terminal).
-        local anim_pid
-        anim_pid=$(animated_box_start "$menu_content")
-
-        # --- Display Menu and Prompt ---
-        tput rc # Return to saved cursor position
-
-        if [[ -n "$anim_pid" ]]; then
-            # SUCCESS: Animation is running. Print content inside the animated box.
-            tput cud 1 # Move down 1 line to be inside the top border
-            while IFS= read -r line; do
-                tput cuf 2 # Move right 2 columns to be inside the left border
-                echo -e "$line"
-            done <<< "$menu_content"
-        else
-            # FAILURE: Animation not supported. Just print the static menu normally.
-            echo "$menu_content"
-        fi
-
-        # Position cursor for the prompt below the content area
-        local height
-        height=$(echo "$menu_content" | wc -l)
-        tput rc # Return to saved position again
-        tput cud "$((height + 2))" # Move cursor below the whole menu area
-
-        echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/Q)${RESET} ${ICON_MAGIC}: "
+        show_menu
         read -rn 1 ACTION
-
-        # --- Cleanup ---
-        # Only try to kill the animation if it was successfully started.
-        if [[ -n "$anim_pid" ]] && ps -p "$anim_pid" > /dev/null; then
-            kill "$anim_pid" 2>/dev/null
-            wait "$anim_pid" 2>/dev/null
-        fi
-        # Always restore cursor visibility, ignore potential errors on basic terminals.
-        tput cnorm &>/dev/null
         echo
 
         case "${ACTION,,}" in
@@ -987,6 +859,6 @@ elif [ -t 0 ]; then
     # Interactive mode - show menu
     main_loop
 else
-    # Fallback to interactive mode (e.g., if piped)
+    # Fallback to interactive mode
     main_loop
 fi
