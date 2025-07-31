@@ -115,10 +115,8 @@ progress_bar() {
     printf "] ${BOLD}${color}%d%%${RESET} ${ICON_FIRE}" $percentage
 }
 
-# <<< NEW FUNCTION: Moving border animation >>>
-# Starts a moving "marching ants" border animation in the background.
-# Usage: anim_pid=$(animated_box_start "$content")
-# The caller is responsible for killing the returned PID.
+# <<< FIXED FUNCTION: Moving border animation >>>
+# This version is more robust and will not crash on incompatible terminals.
 animated_box_start() {
     local content="$1"
     local width=0
@@ -139,53 +137,65 @@ animated_box_start() {
     local box_w=$((width + 4))
     local box_h=$((height + 2))
 
+    # --- Robust Cursor Position Detection ---
+    local term_response
+    local start_row
+    # Ask terminal for cursor position with a 0.2 second timeout.
+    # The -r flag prevents backslash interpretation.
+    if read -s -r -t 0.2 -d R -p $'\E[6n' term_response && [[ "$term_response" == *";"* ]]; then
+        # Response is in the format ^[[<row>;<col>
+        start_row="${term_response#*\[}" # Removes escape sequence prefix
+        start_row="${start_row%%;*}"   # Removes the column part
+    fi
+
+    # --- Validation ---
+    # If we failed to get a valid row number, exit gracefully.
+    # This stops the animation from running and prevents a crash.
+    if ! [[ "$start_row" =~ ^[0-9]+$ ]]; then
+        exit 0
+    fi
+
     # Hide cursor
     tput civis
 
     # Animation loop runs in a subshell (background)
     (
-        # Ensure cursor is restored if the subshell is killed
         trap 'tput cnorm; exit' SIGINT SIGTERM
-
         local frame=0
-        local spin='- \ | /' # Simple spinning characters for corners
-
-        # Get initial cursor position
-        IFS=';' read -sdR -p $'\E[6n' ROW COL
-        local start_row="${ROW#*[}"
+        local spin='- \ | /'
 
         while true; do
+            # Go to the starting line for drawing
+            tput cup "$start_row" 0
+
             local char1=${spin:$((frame % 8)):1}
             local char2=${spin:$(((frame + 2) % 8)):1}
             local char3=${spin:$(((frame + 4) % 8)):1}
             local char4=${spin:$(((frame + 6) % 8)):1}
 
-            # Go to the starting line for drawing
-            tput cup "$start_row" 0
-
-            # Draw top border
+            # Draw top and bottom borders
             echo -ne "${CYAN}${BOLD}${char1}"
             for ((i=0; i<box_w-2; i++)); do echo -n "─"; done
             echo -e "${char2}${RESET}"
-
-            # Draw sides
-            for ((i=0; i<height; i++)); do
-                echo -e "${CYAN}${BOLD}│${RESET}"
-                tput cuf "$((box_w - 1))" # Move cursor to the right side
-                echo -e "${CYAN}${BOLD}│${RESET}"
-            done
-
-            # Draw bottom border
+            # Move to bottom and draw
+            tput cup "$((start_row + box_h - 1))" 0
             echo -ne "${CYAN}${BOLD}${char3}"
             for ((i=0; i<box_w-2; i++)); do echo -n "─"; done
             echo -e "${char4}${RESET}"
+
+            # Draw sides
+            for ((i=1; i<box_h-1; i++)); do
+                tput cup "$((start_row + i))" 0
+                echo -ne "${CYAN}${BOLD}│${RESET}"
+                tput cup "$((start_row + i))" "$((box_w - 1))"
+                echo -ne "${CYAN}${BOLD}│${RESET}"
+            done
 
             ((frame++))
             sleep 0.15
         done
     ) &
-    # Return the PID of the background animation process
-    echo $!
+    echo $! # Return the PID of the animation process
 }
 
 
@@ -695,7 +705,6 @@ install_app() {
     read -rn 1 ANSWER
     echo
 
-# Replace the case statement with:
 case "${ANSWER,,}" in
     p)
         API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
@@ -882,61 +891,47 @@ update_app() {
 # 🚀 MAIN SCRIPT
 # =============================================================================
 
-# <<< MODIFIED LOOP: Integrates the animated border >>>
 main_loop() {
-    # Trap Ctrl+C to ensure we cleanup properly
     trap 'tput cnorm; clear; exit 1' SIGINT
 
     while true; do
         show_banner
-
-        # Get the menu content as a string
         local menu_content
         menu_content=$(get_menu_content)
 
-        # Save cursor position before starting animation
-        tput sc
+        tput sc # Save cursor position
 
-        # Start the animation and get its Process ID
         local anim_pid
         anim_pid=$(animated_box_start "$menu_content")
 
-        # Restore cursor, move inside the box area, and print the menu
-        tput rc
-        tput cud 1 # Move down 1 line to be inside the top border
-        while IFS= read -r line; do
-            tput cuf 2 # Move right 2 columns to be inside the left border
-            echo -e "$line"
-        done <<< "$menu_content"
+        # --- Display Menu Content ---
+        # Even if animation fails to start, the menu is still displayed.
+        tput rc # Restore cursor to where it was before animation.
+        # Print the menu content line by line.
+        echo "$menu_content"
 
         # Position cursor for the prompt below the menu
-        tput rc
         local height
         height=$(echo "$menu_content" | wc -l)
-        tput cud "$((height + 3))" # Move below the box
+        tput rc # Restore again
+        tput cud "$((height + 1))" # Move cursor below the content area
 
-        # Show prompt and read user input
         echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/Q)${RESET} ${ICON_MAGIC}: "
         read -rn 1 ACTION
 
         # --- Cleanup ---
-        # Stop the background animation process
-        kill "$anim_pid" 2>/dev/null
-        wait "$anim_pid" 2>/dev/null # Suppress "Terminated" message
-        # Restore cursor visibility
-        tput cnorm
-        echo # Newline after input
+        # Check if the PID is a valid number before trying to kill it.
+        if [[ "$anim_pid" =~ ^[0-9]+$ ]] && ps -p "$anim_pid" > /dev/null; then
+            kill "$anim_pid" 2>/dev/null
+            wait "$anim_pid" 2>/dev/null
+        fi
+        tput cnorm # Always restore cursor visibility
+        echo
 
         case "${ACTION,,}" in
-            i|install)
-                install_app
-                ;;
-            u|update)
-                update_app
-                ;;
-            r|remove|uninstall)
-                uninstall_app
-                ;;
+            i|install) install_app ;;
+            u|update) update_app ;;
+            r|remove|uninstall) uninstall_app ;;
             q|quit|exit)
                 echo
                 type_text "Thanks for using Dartotsu Installer! ${ICON_SPARKLES}" 0.05
