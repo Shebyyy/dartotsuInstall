@@ -115,15 +115,21 @@ progress_bar() {
     printf "] ${BOLD}${color}%d%%${RESET} ${ICON_FIRE}" $percentage
 }
 
-# <<< FIXED FUNCTION: Moving border animation >>>
-# This version is more robust and will not crash on incompatible terminals.
+# <<< FINAL FIXED FUNCTION: Moving border animation >>>
+# This version is the most robust. It checks for terminal compatibility before running.
 animated_box_start() {
+    # --- Compatibility Check ---
+    # 1. Check if the terminal knows basic cursor movement capabilities. If not, exit silently.
+    #    This prevents all 'tput' errors on very basic terminals (like TERM=dumb).
+    if ! tput cup >/dev/null 2>&1 || ! tput civis >/dev/null 2>&1 || ! tput cnorm >/dev/null 2>&1; then
+        exit 0
+    fi
+
     local content="$1"
     local width=0
     local height=0
     local line
 
-    # Calculate dimensions from the content
     mapfile -t lines <<< "$content"
     height=${#lines[@]}
     for line in "${lines[@]}"; do
@@ -140,64 +146,51 @@ animated_box_start() {
     # --- Robust Cursor Position Detection ---
     local term_response
     local start_row
-    # Ask terminal for cursor position with a 0.2 second timeout.
-    # The -r flag prevents backslash interpretation.
+    # 2. Ask terminal for cursor position with a very short timeout.
     if read -s -r -t 0.2 -d R -p $'\E[6n' term_response && [[ "$term_response" == *";"* ]]; then
-        # Response is in the format ^[[<row>;<col>
-        start_row="${term_response#*\[}" # Removes escape sequence prefix
-        start_row="${start_row%%;*}"   # Removes the column part
+        start_row="${term_response#*\[}"
+        start_row="${start_row%%;*}"
     fi
 
-    # --- Validation ---
-    # If we failed to get a valid row number, exit gracefully.
-    # This stops the animation from running and prevents a crash.
+    # 3. Final validation. If we still don't have a valid number, exit silently.
     if ! [[ "$start_row" =~ ^[0-9]+$ ]]; then
         exit 0
     fi
 
-    # Hide cursor
-    tput civis
+    # If we got this far, the terminal is compatible. Proceed with animation.
+    tput civis # Hide cursor
 
-    # Animation loop runs in a subshell (background)
-    (
+    ( # Start animation in a subshell
         trap 'tput cnorm; exit' SIGINT SIGTERM
         local frame=0
         local spin='- \ | /'
 
         while true; do
-            # Go to the starting line for drawing
-            tput cup "$start_row" 0
-
             local char1=${spin:$((frame % 8)):1}
             local char2=${spin:$(((frame + 2) % 8)):1}
             local char3=${spin:$(((frame + 4) % 8)):1}
             local char4=${spin:$(((frame + 6) % 8)):1}
 
-            # Draw top and bottom borders
-            echo -ne "${CYAN}${BOLD}${char1}"
+            # Use absolute positioning ('cup') for all drawing to avoid unexpected line wraps.
+            tput cup "$start_row" 0; echo -ne "${CYAN}${BOLD}${char1}"
             for ((i=0; i<box_w-2; i++)); do echo -n "─"; done
             echo -e "${char2}${RESET}"
-            # Move to bottom and draw
-            tput cup "$((start_row + box_h - 1))" 0
-            echo -ne "${CYAN}${BOLD}${char3}"
+
+            tput cup "$((start_row + box_h - 1))" 0; echo -ne "${CYAN}${BOLD}${char3}"
             for ((i=0; i<box_w-2; i++)); do echo -n "─"; done
             echo -e "${char4}${RESET}"
 
-            # Draw sides
             for ((i=1; i<box_h-1; i++)); do
-                tput cup "$((start_row + i))" 0
-                echo -ne "${CYAN}${BOLD}│${RESET}"
-                tput cup "$((start_row + i))" "$((box_w - 1))"
-                echo -ne "${CYAN}${BOLD}│${RESET}"
+                tput cup "$((start_row + i))" 0; echo -ne "${CYAN}${BOLD}│${RESET}"
+                tput cup "$((start_row + i))" "$((box_w - 1))"; echo -ne "${CYAN}${BOLD}│${RESET}"
             done
 
             ((frame++))
             sleep 0.15
         done
     ) &
-    echo $! # Return the PID of the animation process
+    echo $! # Return the PID of the animation
 }
-
 
 # Compare commit SHAs between repos
 compare_commits() {
@@ -348,8 +341,7 @@ warn_msg() {
 
 # Stylized menu (returns content as a string)
 get_menu_content() {
-    local menu_content
-    menu_content=$(cat <<-EOF
+    cat <<-EOF
 ${BOLD}${CYAN}╔═══════════════════════════════════════════════════════╗${RESET}
 ${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}
 ${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${GREEN}${BOLD}[I]${RESET} ${ICON_DOWNLOAD} Install Dartotsu ${GRAY}(Get Started)${RESET}      ${CYAN}${BOLD}║${RESET}
@@ -366,8 +358,6 @@ ${BOLD}${CYAN}║${RESET}      ${CYAN}Return to the real world${RESET}          
 ${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}
 ${BOLD}${CYAN}╚═══════════════════════════════════════════════════════╝${RESET}
 EOF
-)
-    echo "$menu_content"
 }
 
 # Version selection menu
@@ -891,47 +881,68 @@ update_app() {
 # 🚀 MAIN SCRIPT
 # =============================================================================
 
+# <<< MODIFIED MAIN LOOP for Graceful Degradation >>>
 main_loop() {
-    trap 'tput cnorm; clear; exit 1' SIGINT
+    # Ensure cursor is visible and screen is clear on exit, even if user presses Ctrl+C
+    trap 'tput cnorm &>/dev/null; clear; exit 1' SIGINT
 
     while true; do
         show_banner
         local menu_content
         menu_content=$(get_menu_content)
 
-        tput sc # Save cursor position
+        # Save the cursor's current position before doing anything that might move it.
+        tput sc
 
+        # Attempt to start the animation. This will return a PID on success
+        # or an empty string on failure (in an incompatible terminal).
         local anim_pid
         anim_pid=$(animated_box_start "$menu_content")
 
-        # --- Display Menu Content ---
-        # Even if animation fails to start, the menu is still displayed.
-        tput rc # Restore cursor to where it was before animation.
-        # Print the menu content line by line.
-        echo "$menu_content"
+        # --- Display Menu and Prompt ---
+        tput rc # Return to saved cursor position
 
-        # Position cursor for the prompt below the menu
+        if [[ -n "$anim_pid" ]]; then
+            # SUCCESS: Animation is running. Print content inside the animated box.
+            tput cud 1 # Move down 1 line to be inside the top border
+            while IFS= read -r line; do
+                tput cuf 2 # Move right 2 columns to be inside the left border
+                echo -e "$line"
+            done <<< "$menu_content"
+        else
+            # FAILURE: Animation not supported. Just print the static menu normally.
+            echo "$menu_content"
+        fi
+
+        # Position cursor for the prompt below the content area
         local height
         height=$(echo "$menu_content" | wc -l)
-        tput rc # Restore again
-        tput cud "$((height + 1))" # Move cursor below the content area
+        tput rc # Return to saved position again
+        tput cud "$((height + 2))" # Move cursor below the whole menu area
 
         echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/Q)${RESET} ${ICON_MAGIC}: "
         read -rn 1 ACTION
 
         # --- Cleanup ---
-        # Check if the PID is a valid number before trying to kill it.
-        if [[ "$anim_pid" =~ ^[0-9]+$ ]] && ps -p "$anim_pid" > /dev/null; then
+        # Only try to kill the animation if it was successfully started.
+        if [[ -n "$anim_pid" ]] && ps -p "$anim_pid" > /dev/null; then
             kill "$anim_pid" 2>/dev/null
             wait "$anim_pid" 2>/dev/null
         fi
-        tput cnorm # Always restore cursor visibility
+        # Always restore cursor visibility, ignore potential errors on basic terminals.
+        tput cnorm &>/dev/null
         echo
 
         case "${ACTION,,}" in
-            i|install) install_app ;;
-            u|update) update_app ;;
-            r|remove|uninstall) uninstall_app ;;
+            i|install)
+                install_app
+                ;;
+            u|update)
+                update_app
+                ;;
+            r|remove|uninstall)
+                uninstall_app
+                ;;
             q|quit|exit)
                 echo
                 type_text "Thanks for using Dartotsu Installer! ${ICON_SPARKLES}" 0.05
