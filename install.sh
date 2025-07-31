@@ -2,7 +2,7 @@
 set -e
 
 # =============================================================================
-# 🎯 DARTOTSU INSTALLER - Beautiful Terminal Experience with Moving Box Animations
+# 🎯 DARTOTSU INSTALLER - Beautiful Terminal Experience
 # =============================================================================
 
 # Define application details
@@ -41,13 +41,6 @@ GRAD4='\033[38;5;48m'   # Light teal
 GRAD5='\033[38;5;51m'   # Cyan
 GRAD6='\033[38;5;87m'   # Bright cyan
 
-# Neon colors for effects
-NEON_BLUE='\033[38;5;33m'
-NEON_GREEN='\033[38;5;46m'
-NEON_PINK='\033[38;5;201m'
-NEON_YELLOW='\033[38;5;226m'
-NEON_CYAN='\033[38;5;51m'
-
 # Icons
 ICON_FIRE="🔥"
 ICON_LIGHTNING="⚡"
@@ -65,179 +58,38 @@ ICON_SHIELD="🛡️"
 ICON_CROWN="👑"
 ICON_COMET="☄️"
 ICON_GALAXY="🌌"
-
-# Animation chars
-BOX_CHARS="▀▄█▌▐░▒▓■▣▤▥▦▧▨▩"
-WAVE_CHARS="~∼≈∽∿〜"
-PULSE_CHARS="●○◐◑◒◓◔◕"
+ICON_DOWNLOAD="📥"
+ICON_INSTALL="🛠️"
+ICON_UNINSTALL="🗑️"
+ICON_UPDATE="🔄"
+ICON_SPARKLES="✨"
+ICON_SUCCESS="✅"
+ICON_ERROR="❌"
+ICON_INFO="ℹ️"
+ICON_WARNING="⚠️"
+ICON_ROCKET="🚀"
 
 # =============================================================================
-# 🎭 ENHANCED ANIMATION & UI FUNCTIONS
+# 🎭 ANIMATION & UI FUNCTIONS
 # =============================================================================
 
-# Moving box animation like Excel copy selection
-moving_box_animation() {
-    local width=${1:-60}
-    local height=${2:-8}
-    local iterations=${3:-3}
-    local delay=${4:-0.1}
-    
-    for ((iter=0; iter<iterations; iter++)); do
-        for ((phase=0; phase<4; phase++)); do
-            # Clear area
-            for ((row=0; row<height+2; row++)); do
-                printf "\033[%dA\033[K" 1 2>/dev/null || true
-            done
-            
-            # Draw animated border
-            case $phase in
-                0) border_char="─" corner_char="┌┐└┘" ;;
-                1) border_char="━" corner_char="┏┓┗┛" ;;
-                2) border_char="═" corner_char="╔╗╚╝" ;;
-                3) border_char="▬" corner_char="▀▀▄▄" ;;
-            esac
-            
-            # Get corner characters
-            tl="${corner_char:0:1}"
-            tr="${corner_char:1:1}"
-            bl="${corner_char:2:1}"
-            br="${corner_char:3:1}"
-            
-            # Animate with color gradient
-            local color=""
-            case $phase in
-                0) color="$NEON_BLUE" ;;
-                1) color="$NEON_GREEN" ;;
-                2) color="$NEON_PINK" ;;
-                3) color="$NEON_CYAN" ;;
-            esac
-            
-            # Top border
-            printf "${color}${BOLD}%s" "$tl"
-            for ((i=0; i<width-2; i++)); do
-                printf "%s" "$border_char"
-            done
-            printf "%s${RESET}\n" "$tr"
-            
-            # Side borders with moving content
-            for ((r=1; r<height-1; r++)); do
-                printf "${color}${BOLD}│${RESET}"
-                
-                # Moving pattern inside
-                for ((c=0; c<width-2; c++)); do
-                    local pos=$(( (c + r + phase + iter*4) % 8 ))
-                    case $pos in
-                        0|4) printf "${DIM}░${RESET}" ;;
-                        1|5) printf "${GRAY}▒${RESET}" ;;
-                        2|6) printf "${WHITE}▓${RESET}" ;;
-                        3|7) printf "${BOLD}█${RESET}" ;;
-                    esac
-                done
-                
-                printf "${color}${BOLD}│${RESET}\n"
-            done
-            
-            # Bottom border
-            printf "${color}${BOLD}%s" "$bl"
-            for ((i=0; i<width-2; i++)); do
-                printf "%s" "$border_char"
-            done
-            printf "%s${RESET}\n" "$br"
-            
-            sleep $delay
-        done
-    done
-}
-
-# Pulse animation for text
-pulse_text() {
-    local text="$1"
-    local iterations=${2:-3}
-    local delay=${3:-0.3}
-    
-    for ((i=0; i<iterations; i++)); do
-        for char in $PULSE_CHARS; do
-            printf "\r${NEON_PINK}${BOLD}%s${RESET} %s" "$char" "$text"
-            sleep $delay
-        done
-    done
-    printf "\r✨ %s\n" "$text"
-}
-
-# Wave animation for borders
-wave_border() {
-    local width=${1:-60}
-    local iterations=${2:-2}
-    local delay=${3:-0.05}
-    
-    for ((iter=0; iter<iterations; iter++)); do
-        for ((offset=0; offset<8; offset++)); do
-            printf "\r"
-            for ((i=0; i<width; i++)); do
-                local wave_pos=$(( (i + offset) % 6 ))
-                case $wave_pos in
-                    0) printf "${NEON_BLUE}~${RESET}" ;;
-                    1) printf "${NEON_CYAN}∼${RESET}" ;;
-                    2) printf "${NEON_GREEN}≈${RESET}" ;;
-                    3) printf "${NEON_YELLOW}∽${RESET}" ;;
-                    4) printf "${NEON_PINK}∿${RESET}" ;;
-                    5) printf "${PURPLE}〜${RESET}" ;;
-                esac
-            done
-            sleep $delay
-        done
-    done
-    echo
-}
-
-# Matrix-style cascading text
-matrix_cascade() {
-    local text="$1"
-    local width=${2:-60}
-    local height=${3:-8}
-    
-    # Create matrix effect
-    for ((row=0; row<height; row++)); do
-        for ((col=0; col<width; col++)); do
-            if (( RANDOM % 4 == 0 )); then
-                printf "${NEON_GREEN}%c${RESET}" $((RANDOM % 26 + 65))
-            else
-                printf " "
-            fi
-        done
-        echo
-        sleep 0.03
-    done
-    
-    # Clear and show actual text
-    for ((i=0; i<height; i++)); do
-        printf "\033[1A\033[K"
-    done
-    
-    pulse_text "$text" 2 0.2
-}
-
-# Enhanced spinner with box movement
-enhanced_spinner() {
+# Spinner animation
+spinner() {
     local pid=$1
-    local message="${2:-Processing}"
-    local delay=0.08
-    local box_chars="▖▘▝▗▖▘▝▗"
-    local colors=("$NEON_BLUE" "$NEON_GREEN" "$NEON_YELLOW" "$NEON_PINK" "$NEON_CYAN")
-    local i=0
-    
-    while [ "$(ps a | awk '{print $1}' | grep $pid 2>/dev/null)" ]; do
-        local color=${colors[$((i % ${#colors[@]}))]}
-        local char=${box_chars:$((i % ${#box_chars})):1}
-        printf "\r ${color}${BOLD}%s${RESET} %s..." "$char" "$message"
-        ((i++))
+    local delay=0.1
+    local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
+        local temp=${spinstr#?}
+        printf " [${CYAN}%c${RESET}]  " "$spinstr"
+        local spinstr=$temp${spinstr%"$temp"}
         sleep $delay
+        printf "\b\b\b\b\b\b"
     done
-    printf "\r ${GREEN}${BOLD}✓${RESET} %s... ${GREEN}Done!${RESET}\n" "$message"
+    printf "    \b\b\b\b"
 }
 
-# Animated progress bar with moving elements
-animated_progress_bar() {
+# Progress bar
+progress_bar() {
     local current=$1
     local total=$2
     local width=50
@@ -246,300 +98,288 @@ animated_progress_bar() {
     local empty=$((width - filled))
 
     # Color gradient based on progress
-    local fill_color=""
-    local bg_color="${GRAY}"
+    local color=""
     if [ $percentage -lt 25 ]; then
-        fill_color="${RED}"
+        color="${RED}"
     elif [ $percentage -lt 50 ]; then
-        fill_color="${YELLOW}"
+        color="${YELLOW}"
     elif [ $percentage -lt 75 ]; then
-        fill_color="${CYAN}"
+        color="${CYAN}"
     else
-        fill_color="${GREEN}"
+        color="${GREEN}"
     fi
 
     printf "\r${BOLD}${ICON_LIGHTNING} Progress: ${RESET}["
-    
-    # Animated fill with different patterns
-    for ((i=0; i<filled; i++)); do
-        local pattern=$(( (i + $(date +%s)) % 4 ))
-        case $pattern in
-            0) printf "${fill_color}█${RESET}" ;;
-            1) printf "${fill_color}▓${RESET}" ;;
-            2) printf "${fill_color}▒${RESET}" ;;
-            3) printf "${fill_color}░${RESET}" ;;
-        esac
-    done
-    
-    # Moving cursor at progress edge
-    if [ $filled -lt $width ]; then
-        printf "${WHITE}${BOLD}▶${RESET}"
-        ((empty--))
-    fi
-    
-    # Empty space with subtle pattern
-    for ((i=0; i<empty; i++)); do
-        if (( i % 3 == 0 )); then
-            printf "${bg_color}░${RESET}"
-        else
-            printf "${bg_color}·${RESET}"
-        fi
-    done
-    
-    printf "] ${BOLD}${fill_color}%d%%${RESET} ${ICON_FIRE}" $percentage
+    printf "${color}%*s${RESET}" $filled | tr ' ' '█'
+    printf "${GRAY}%*s${RESET}" $empty | tr ' ' '░'
+    printf "] ${BOLD}${color}%d%%${RESET} ${ICON_FIRE}" $percentage
 }
 
-# Compare commits with enhanced visuals
+# <<< NEW FUNCTION: Moving border animation >>>
+# Starts a moving "marching ants" border animation in the background.
+# Usage: anim_pid=$(animated_box_start "$content")
+# The caller is responsible for killing the returned PID.
+animated_box_start() {
+    local content="$1"
+    local width=0
+    local height=0
+    local line
+
+    # Calculate dimensions from the content
+    mapfile -t lines <<< "$content"
+    height=${#lines[@]}
+    for line in "${lines[@]}"; do
+        local stripped_line
+        stripped_line=$(echo -e "$line" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g')
+        if (( ${#stripped_line} > width )); then
+            width=${#stripped_line}
+        fi
+    done
+
+    local box_w=$((width + 4))
+    local box_h=$((height + 2))
+
+    # Hide cursor
+    tput civis
+
+    # Animation loop runs in a subshell (background)
+    (
+        # Ensure cursor is restored if the subshell is killed
+        trap 'tput cnorm; exit' SIGINT SIGTERM
+
+        local frame=0
+        local spin='- \ | /' # Simple spinning characters for corners
+
+        # Get initial cursor position
+        IFS=';' read -sdR -p $'\E[6n' ROW COL
+        local start_row="${ROW#*[}"
+
+        while true; do
+            local char1=${spin:$((frame % 8)):1}
+            local char2=${spin:$(((frame + 2) % 8)):1}
+            local char3=${spin:$(((frame + 4) % 8)):1}
+            local char4=${spin:$(((frame + 6) % 8)):1}
+
+            # Go to the starting line for drawing
+            tput cup "$start_row" 0
+
+            # Draw top border
+            echo -ne "${CYAN}${BOLD}${char1}"
+            for ((i=0; i<box_w-2; i++)); do echo -n "─"; done
+            echo -e "${char2}${RESET}"
+
+            # Draw sides
+            for ((i=0; i<height; i++)); do
+                echo -e "${CYAN}${BOLD}│${RESET}"
+                tput cuf "$((box_w - 1))" # Move cursor to the right side
+                echo -e "${CYAN}${BOLD}│${RESET}"
+            done
+
+            # Draw bottom border
+            echo -ne "${CYAN}${BOLD}${char3}"
+            for ((i=0; i<box_w-2; i++)); do echo -n "─"; done
+            echo -e "${char4}${RESET}"
+
+            ((frame++))
+            sleep 0.15
+        done
+    ) &
+    # Return the PID of the background animation process
+    echo $!
+}
+
+
+# Compare commit SHAs between repos
 compare_commits() {
     local main_repo="aayush2622/Dartotsu"
     local alpha_repo="grayankit/Dartotsu-Downloader"
 
     echo
-    pulse_text "Initiating quantum commit analysis" 2 0.2
-    
-    # Moving box animation during data fetch
-    echo -e "${CYAN}${DIM}> Accessing GitHub API...${RESET}"
-    moving_box_animation 40 3 1 0.1 &
-    local anim_pid=$!
-    
-    # Get data
-    local main_commit=$(curl -s "https://api.github.com/repos/${main_repo}/commits" | grep '"sha"' | head -1 | cut -d '"' -f 4 | cut -c1-7) 2>/dev/null
-    local main_date=$(curl -s "https://api.github.com/repos/${main_repo}/commits" | grep '"date"' | head -1 | cut -d '"' -f 4) 2>/dev/null
-    local main_author=$(curl -s "https://api.github.com/repos/${main_repo}/commits" | grep '"name"' | head -1 | cut -d '"' -f 4) 2>/dev/null
-
-    local alpha_release=$(curl -s "https://api.github.com/repos/${alpha_repo}/releases/latest") 2>/dev/null
-    local alpha_tag=$(echo "$alpha_release" | grep '"tag_name"' | cut -d '"' -f 4) 2>/dev/null
-    local alpha_date=$(echo "$alpha_release" | grep '"published_at"' | cut -d '"' -f 4) 2>/dev/null
-
-    # Stop animation
-    kill $anim_pid 2>/dev/null || true
-    wait $anim_pid 2>/dev/null || true
-    
-    # Clear animation area
-    for ((i=0; i<5; i++)); do
-        printf "\033[1A\033[K"
+    echo -ne "${CYAN}${ICON_ROBOT}${RESET} ${BOLD}Initiating quantum commit analysis${RESET}"
+    for i in {1..5}; do
+        sleep 0.3
+        echo -ne "${CYAN}.${RESET}"
     done
+    echo -e " ${GREEN}${ICON_LIGHTNING}${RESET}"
+
+    # Matrix-style loading
+    echo -e "${GREEN}${DIM}> Accessing GitHub API...${RESET}"
+    sleep 0.5
+    echo -e "${GREEN}${DIM}> Scanning commit trees...${RESET}"
+    sleep 0.5
+    echo -e "${GREEN}${DIM}> Cross-referencing SHA hashes...${RESET}"
+    sleep 0.5
+
+    # Get data
+    local main_commit=$(curl -s "https://api.github.com/repos/${main_repo}/commits" | grep '"sha"' | head -1 | cut -d '"' -f 4 | cut -c1-7)
+    local main_date=$(curl -s "https://api.github.com/repos/${main_repo}/commits" | grep '"date"' | head -1 | cut -d '"' -f 4)
+    local main_author=$(curl -s "https://api.github.com/repos/${main_repo}/commits" | grep '"name"' | head -1 | cut -d '"' -f 4)
+
+    local alpha_release=$(curl -s "https://api.github.com/repos/${alpha_repo}/releases/latest")
+    local alpha_tag=$(echo "$alpha_release" | grep '"tag_name"' | cut -d '"' -f 4)
+    local alpha_date=$(echo "$alpha_release" | grep '"published_at"' | cut -d '"' -f 4)
 
     echo
-    # Animated border
-    wave_border 65 2 0.03
-    
     echo -e "${BOLD}${PURPLE}╔═══════════════════════════════════════════════════════════════╗${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}                    ${ICON_CRYSTAL} COMMIT MATRIX ${ICON_CRYSTAL}                    ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}╠═══════════════════════════════════════════════════════════════╣${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET} ${ICON_GALAXY} ${BOLD}MAIN REPOSITORY${RESET} ${GRAY}(${main_repo})${RESET}          ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_DIAMOND} Commit SHA: ${NEON_YELLOW}${BOLD}${main_commit}${RESET}                           ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_STAR} Author: ${NEON_CYAN}${main_author}${RESET}                              ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo "Unknown")${RESET}  ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_DIAMOND} Commit SHA: ${YELLOW}${BOLD}${main_commit}${RESET}                           ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_STAR} Author: ${CYAN}${main_author}${RESET}                              ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}  ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET} ${ICON_ALIEN} ${BOLD}ALPHA REPOSITORY${RESET} ${GRAY}(${alpha_repo})${RESET} ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_BOMB} Release Tag: ${NEON_PINK}${BOLD}${alpha_tag}${RESET}                            ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_GHOST} Published: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo "Unknown")${RESET}    ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_BOMB} Release Tag: ${PURPLE}${BOLD}${alpha_tag}${RESET}                            ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_GHOST} Published: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}    ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
 
     # Sync status with epic effects
     if [[ "$alpha_tag" == *"$main_commit"* ]]; then
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_MAGIC} SYNC STATUS: ${NEON_GREEN}${BOLD}${ICON_FIRE} PERFECTLY SYNCHRONIZED ${ICON_FIRE}${RESET}   ${PURPLE}${BOLD}║${RESET}"
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${NEON_GREEN}${ICON_LIGHTNING} Repositories are in perfect harmony! ${ICON_LIGHTNING}${RESET}           ${PURPLE}${BOLD}║${RESET}"
+        echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_MAGIC} SYNC STATUS: ${GREEN}${BOLD}${ICON_FIRE} PERFECTLY SYNCHRONIZED ${ICON_FIRE}${RESET}   ${PURPLE}${BOLD}║${RESET}"
+        echo -e "${BOLD}${PURPLE}║${RESET}   ${GREEN}${ICON_LIGHTNING} Repositories are in perfect harmony! ${ICON_LIGHTNING}${RESET}           ${PURPLE}${BOLD}║${RESET}"
     else
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_CRYSTAL} SYNC STATUS: ${NEON_YELLOW}${BOLD}${ICON_SWORD} DIVERGED TIMELINES ${ICON_SWORD}${RESET}     ${PURPLE}${BOLD}║${RESET}"
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${NEON_YELLOW}${ICON_SKULL} Alpha may contain different features ${ICON_SKULL}${RESET}            ${PURPLE}${BOLD}║${RESET}"
+        echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_CRYSTAL} SYNC STATUS: ${YELLOW}${BOLD}${ICON_SWORD} DIVERGED TIMELINES ${ICON_SWORD}${RESET}     ${PURPLE}${BOLD}║${RESET}"
+        echo -e "${BOLD}${PURPLE}║${RESET}   ${YELLOW}${ICON_SKULL} Alpha may contain different features ${ICON_SKULL}${RESET}            ${PURPLE}${BOLD}║${RESET}"
     fi
 
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}╚═══════════════════════════════════════════════════════════════╝${RESET}"
-    
-    wave_border 65 2 0.03
     echo
 
-    # Cool countdown with moving boxes
+    # Cool countdown
     echo -ne "${BOLD}${CYAN}Preparing alpha download in: ${RESET}"
     for i in 3 2 1; do
-        printf "${NEON_PINK}${BOLD}[%d]${RESET}" $i
+        echo -ne "${RED}${BOLD}$i${RESET}"
         sleep 0.8
-        printf "\b\b\b   \b\b\b"
+        echo -ne "\b \b"
     done
-    echo -e "${NEON_GREEN}${BOLD}[GO!] ${ICON_LIGHTNING}${RESET}"
+    echo -e "${GREEN}${BOLD}GO! ${ICON_ROCKET}${RESET}"
     echo
 }
 
-# Enhanced typing effect with cursor
-type_text_enhanced() {
+# Animated text typing effect
+type_text() {
     local text="$1"
     local delay=${2:-0.03}
-    local cursor="${3:-▋}"
-    
-    for ((i=0; i<=${#text}; i++)); do
-        printf "\r%s${NEON_CYAN}%s${RESET}" "${text:0:$i}" "$cursor"
+    for ((i=0; i<${#text}; i++)); do
+        printf "${text:$i:1}"
         sleep $delay
     done
-    printf "\r%s \n" "$text"
+    echo
 }
 
-# Cool banner with animated elements
+# Cool banner
 show_banner() {
     clear
     echo
-    
-    # Animated top border
-    wave_border 72 2 0.02
-    
-    # ASCII art with gradient animation
-    local banner_lines=(
-        "  ██████╗  █████╗ ██████╗ ████████╗ ██████╗ ████████╗███████╗██╗   ██╗"
-        "  ██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔═══██╗╚══██╔══╝██╔════╝██║   ██║"
-        "  ██║  ██║███████║██████╔╝   ██║   ██║   ██║   ██║   ███████╗██║   ██║"
-        "  ██║  ██║██╔══██║██╔══██╗   ██║   ██║   ██║   ██║   ╚════██║██║   ██║"
-        "  ██████╔╝██║  ██║██║  ██║   ██║   ╚██████╔╝   ██║   ███████║╚██████╔╝"
-        "  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝    ╚═════╝    ╚═╝   ╚══════╝ ╚═════╝ "
-    )
-    
-    local gradients=("$GRAD1" "$GRAD2" "$GRAD3" "$GRAD4" "$GRAD5" "$GRAD6")
-    
-    for i in "${!banner_lines[@]}"; do
-        local color=${gradients[$i]}
-        echo -e "${color}${banner_lines[$i]}${RESET}"
-        sleep 0.1
+    # Animated border effect
+    for i in {1..3}; do
+        echo -e "${GRAD1}════════════════════════════════════════════════════════════════════════${RESET}"
+        sleep 0.05
+        printf "\033[1A\033[K"
     done
-    
+
+    echo -e "${GRAD1}  ██████╗  █████╗ ██████╗ ████████╗ ██████╗ ████████╗███████╗██╗   ██╗${RESET}"
+    echo -e "${GRAD2}  ██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔═══██╗╚══██╔══╝██╔════╝██║   ██║${RESET}"
+    echo -e "${GRAD3}  ██║  ██║███████║██████╔╝   ██║   ██║   ██║   ██║   ███████╗██║   ██║${RESET}"
+    echo -e "${GRAD4}  ██║  ██║██╔══██║██╔══██╗   ██║   ██║   ██║   ██║   ╚════██║██║   ██║${RESET}"
+    echo -e "${GRAD5}  ██████╔╝██║  ██║██║  ██║   ██║   ╚██████╔╝   ██║   ███████║╚██████╔╝${RESET}"
+    echo -e "${GRAD6}  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝    ╚═════╝    ╚═╝   ╚══════╝ ╚═════╝ ${RESET}"
     echo
-    pulse_text "The Ultimate Anime & Manga Experience" 2 0.3
-    
-    # Moving separator
-    wave_border 72 1 0.02
-    
+    echo -e "${CYAN}${BOLD}                 ${ICON_FIRE}${ICON_LIGHTNING} The Ultimate Anime & Manga Experience ${ICON_LIGHTNING}${ICON_FIRE}${RESET}"
+    echo -e "${GRAY}                    ═══════════════════════════════════════${RESET}"
     echo -e "${PURPLE}${DIM}                           ${ICON_GALAXY} Powered by Dreams ${ICON_GALAXY}${RESET}"
     echo
 }
 
-# Enhanced section headers with moving elements
+# Stylized section headers
 section_header() {
     local title="$1"
     local icon="$2"
-    
     echo
-    # Animated box around title
-    moving_box_animation 55 3 1 0.05 &
-    local anim_pid=$!
-    
-    sleep 0.3
-    kill $anim_pid 2>/dev/null || true
-    wait $anim_pid 2>/dev/null || true
-    
-    # Clear animation
-    for ((i=0; i<5; i++)); do
-        printf "\033[1A\033[K"
-    done
-    
     echo -e "${BOLD}${BLUE}╭─────────────────────────────────────────────────────╮${RESET}"
     echo -e "${BOLD}${BLUE}│${RESET} ${icon} ${BOLD}${WHITE}${title}${RESET} ${BLUE}│${RESET}"
     echo -e "${BOLD}${BLUE}╰─────────────────────────────────────────────────────╯${RESET}"
     echo
 }
 
-# Enhanced success/error messages with animations
+# Success message with animation
 success_msg() {
     local msg="$1"
     echo
-    pulse_text "SUCCESS!" 1 0.2
-    echo -e "${GREEN}${BOLD}┌─ ✨ SUCCESS! ─────────────────────────────────────────┐${RESET}"
-    echo -e "${GREEN}${BOLD}│${RESET} ${ICON_STAR} ${msg} ${GREEN}${BOLD}│${RESET}"
+    echo -e "${GREEN}${BOLD}┌─ SUCCESS! ─────────────────────────────────────────┐${RESET}"
+    echo -e "${GREEN}${BOLD}│${RESET} ${ICON_SUCCESS} ${msg} ${GREEN}${BOLD}│${RESET}"
     echo -e "${GREEN}${BOLD}└────────────────────────────────────────────────────┘${RESET}"
     echo
 }
 
+# Error message
 error_msg() {
     local msg="$1"
     echo
-    echo -e "${RED}${BOLD}┌─ ❌ ERROR! ───────────────────────────────────────────┐${RESET}"
-    echo -e "${RED}${BOLD}│${RESET} ${ICON_SKULL} ${msg} ${RED}${BOLD}│${RESET}"
+    echo -e "${RED}${BOLD}┌─ ERROR! ───────────────────────────────────────────┐${RESET}"
+    echo -e "${RED}${BOLD}│${RESET} ${ICON_ERROR} ${msg} ${RED}${BOLD}│${RESET}"
     echo -e "${RED}${BOLD}└────────────────────────────────────────────────────┘${RESET}"
     echo
 }
 
-# Enhanced info/warning messages
+# Info message
 info_msg() {
     local msg="$1"
-    echo -e "${NEON_CYAN}${ICON_LIGHTNING}${RESET} ${msg}"
+    echo -e "${CYAN}${ICON_INFO}${RESET} ${msg}"
 }
 
+# Warning message
 warn_msg() {
     local msg="$1"
-    echo -e "${NEON_YELLOW}⚠️${RESET} ${msg}"
+    echo -e "${YELLOW}${ICON_WARNING}${RESET} ${msg}"
 }
 
-# Enhanced menu with moving elements
-show_menu() {
-    # Glitch effect title
-    local title_chars=("D" "A" "R" "T" "O" "T" "S" "U" " " "C" "O" "N" "T" "R" "O" "L" " " "P" "A" "N" "E" "L")
-    printf "${GRAD1}█${GRAD2}█${GRAD3}█${GRAD4}█${GRAD5}█${GRAD6}█${RESET} ${BOLD}"
-    for char in "${title_chars[@]}"; do
-        printf "%s" "$char"
-        sleep 0.02
-    done
-    printf "${RESET} ${GRAD6}█${GRAD5}█${GRAD4}█${GRAD3}█${GRAD2}█${GRAD1}█${RESET}\n"
-    
-    echo
-    
-    # Animated menu border
-    moving_box_animation 57 12 1 0.08 &
-    local anim_pid=$!
-    sleep 0.5
-    kill $anim_pid 2>/dev/null || true
-    wait $anim_pid 2>/dev/null || true
-    
-    # Clear animation
-    for ((i=0; i<14; i++)); do
-        printf "\033[1A\033[K"
-    done
-    
-    echo -e "${BOLD}${NEON_CYAN}╔═══════════════════════════════════════════════════════╗${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}                                                     ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}  ${ICON_ROBOT} ${NEON_GREEN}${BOLD}[I]${RESET} ${ICON_DOWNLOAD} Install Dartotsu ${GRAY}(Get Started)${RESET}      ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}      ${GREEN}Deploy the ultimate anime experience${RESET}        ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}                                                     ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}  ${ICON_LIGHTNING} ${NEON_YELLOW}${BOLD}[U]${RESET} ${ICON_STAR} Update Dartotsu ${GRAY}(Stay Current)${RESET}     ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}      ${YELLOW}Upgrade to the latest and greatest${RESET}         ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}                                                     ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}  ${ICON_BOMB} ${NEON_PINK}${BOLD}[R]${RESET} ${ICON_SKULL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}   ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}      ${RED}Complete annihilation of installation${RESET}       ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}                                                     ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}  ${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_MAGIC} Quit ${GRAY}(Escape the Matrix)${RESET}            ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}      ${CYAN}Return to the real world${RESET}                   ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}║${RESET}                                                     ${NEON_CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${NEON_CYAN}╚═══════════════════════════════════════════════════════╝${RESET}"
-    echo
-    echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/Q)${RESET} ${ICON_MAGIC}: "
+# Stylized menu (returns content as a string)
+get_menu_content() {
+    local menu_content
+    menu_content=$(cat <<-EOF
+${BOLD}${CYAN}╔═══════════════════════════════════════════════════════╗${RESET}
+${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${GREEN}${BOLD}[I]${RESET} ${ICON_DOWNLOAD} Install Dartotsu ${GRAY}(Get Started)${RESET}      ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}║${RESET}      ${GREEN}Deploy the ultimate anime experience${RESET}        ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}║${RESET}  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[U]${RESET} ${ICON_UPDATE} Update Dartotsu ${GRAY}(Stay Current)${RESET}     ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}║${RESET}      ${YELLOW}Upgrade to the latest and greatest${RESET}         ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}║${RESET}  ${ICON_BOMB} ${RED}${BOLD}[R]${RESET} ${ICON_UNINSTALL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}   ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}║${RESET}      ${RED}Complete annihilation of installation${RESET}       ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}║${RESET}  ${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_SPARKLES} Quit ${GRAY}(Escape the Matrix)${RESET}            ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}║${RESET}      ${CYAN}Return to the real world${RESET}                   ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}
+${BOLD}${CYAN}╚═══════════════════════════════════════════════════════╝${RESET}
+EOF
+)
+    echo "$menu_content"
 }
 
-# Enhanced version menu
+# Version selection menu
 version_menu() {
     echo
     # Animated title
-    matrix_cascade "VERSION SELECTION" 50 4
-    
-    # Moving box animation before showing menu
-    moving_box_animation 55 8 1 0.06 &
-    local anim_pid=$!
-    sleep 0.6
-    kill $anim_pid 2>/dev/null || true
-    wait $anim_pid 2>/dev/null || true
-    
-    # Clear animation
-    for ((i=0; i<10; i++)); do
-        printf "\033[1A\033[K"
+    for char in "V" "E" "R" "S" "I" "O" "N" " " "S" "E" "L" "E" "C" "T" "I" "O" "N"; do
+        echo -ne "${BOLD}${PURPLE}$char${RESET}"
+        sleep 0.05
     done
+    echo
+    echo
 
     echo -e "${BOLD}${GRAD2}╔═══════════════════════════════════════════════════════╗${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_CROWN} ${NEON_GREEN}${BOLD}[S]${RESET} Stable Release ${GRAY}(Battle-Tested)${RESET}         ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_CROWN} ${GREEN}${BOLD}[S]${RESET} Stable Release ${GRAY}(Battle-Tested)${RESET}         ${GRAD2}${BOLD}║${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}      ${ICON_SHIELD} Rock solid, enterprise ready            ${GRAD2}${BOLD}║${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_LIGHTNING} ${NEON_YELLOW}${BOLD}[P]${RESET} Pre-release ${GRAY}(Bleeding Edge)${RESET}          ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[P]${RESET} Pre-release ${GRAY}(Bleeding Edge)${RESET}          ${GRAD2}${BOLD}║${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}      ${ICON_FIRE} Latest features, some bugs possible     ${GRAD2}${BOLD}║${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_BOMB} ${NEON_PINK}${BOLD}[A]${RESET} Alpha Build ${GRAY}(Danger Zone!)${RESET}            ${GRAD2}${BOLD}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_BOMB} ${PURPLE}${BOLD}[A]${RESET} Alpha Build ${GRAY}(Danger Zone!)${RESET}            ${GRAD2}${BOLD}║${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}      ${ICON_SKULL} Experimental, use at your own risk     ${GRAD2}${BOLD}║${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
     echo -e "${BOLD}${GRAD2}╚═══════════════════════════════════════════════════════╝${RESET}"
@@ -568,15 +408,15 @@ add_updater_alias() {
   local alias_line="alias dartotsu-updater='bash <(curl -s https://raw.githubusercontent.com/aayush2622/Dartotsu/main/scripts/install.sh) update'"
 
   if grep -Fxq "$alias_line" "$shell_rc" 2>/dev/null; then
-    echo -ne "${YELLOW}⚠️${RESET} The 'dartotsu-updater' alias already exists in your shell config file ($(basename "$shell_rc")). Would you like to remove it? [y/N]: "
+    echo -ne "${YELLOW}${ICON_WARNING}${RESET} The 'dartotsu-updater' alias already exists in your shell config file ($(basename "$shell_rc")). Would you like to remove it? [y/N]: "
     read -r remove_response
     case "$remove_response" in
       [yY][eE][sS]|[yY])
         sed -i "\|$alias_line|d" "$shell_rc"
-        echo -e " ${GREEN}✓ Alias removed from $(basename "$shell_rc")${RESET}"
+        echo -e " ${GREEN}${ICON_SUCCESS} Alias removed from $(basename "$shell_rc")${RESET}"
         ;;
       *)
-        echo -e " ${CYAN}ℹ️ Keeping existing alias.${RESET}"
+        echo -e " ${CYAN}${ICON_INFO} Keeping existing alias.${RESET}"
         ;;
     esac
   else
@@ -585,16 +425,19 @@ add_updater_alias() {
     case "$add_response" in
       [yY][eE][sS]|[yY])
         echo "$alias_line" >> "$shell_rc"
-        echo -e " ${GREEN}✓ Alias added to $(basename "$shell_rc")${RESET}"
+        echo -e " ${GREEN}${ICON_SUCCESS} Alias added to $(basename "$shell_rc")${RESET}"
         info_msg "You can now run '${BOLD}dartotsu-updater${RESET}' to update anytime!"
         info_msg "Run '${BOLD}source $shell_rc${RESET}' or restart your terminal to activate the alias"
         ;;
       *)
-        echo -e " ${YELLOW}⚠️ Skipped adding alias${RESET}"
+        echo -e " ${YELLOW}${ICON_WARNING} Skipped adding alias${RESET}"
         ;;
     esac
   fi
 }
+
+
+
 
 # =============================================================================
 # 🛠️ ENHANCED DEPENDENCY MANAGEMENT
@@ -742,26 +585,22 @@ install_packages() {
 
     # Update package lists if needed
     if [ -n "$update_cmd" ]; then
-        echo -ne "${CYAN}📦${RESET} Updating package lists..."
+        echo -ne "${CYAN}${ICON_INSTALL}${RESET} Updating package lists..."
         if eval "$update_cmd" >/dev/null 2>&1; then
-            echo -e " ${GREEN}✓${RESET}"
+            echo -e " ${GREEN}${ICON_SUCCESS}${RESET}"
         else
-            echo -e " ${YELLOW}⚠️ Update failed, continuing...${RESET}"
+            echo -e " ${YELLOW}${ICON_WARNING} Update failed, continuing...${RESET}"
         fi
     fi
 
-    # Install packages with enhanced animation
-    enhanced_spinner $ "Installing dependencies" &
-    local spinner_pid=$!
-    
+    # Install packages
+    echo -ne "${CYAN}${ICON_INSTALL}${RESET} Installing dependencies..."
+
     if eval "$install_cmd ${deps[*]}" >/dev/null 2>&1; then
-        kill $spinner_pid 2>/dev/null || true
-        wait $spinner_pid 2>/dev/null || true
-        echo -e "\r ${GREEN}✓ Dependencies installed successfully!${RESET}                "
+        echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
+        info_msg "Dependencies installed successfully!"
     else
-        kill $spinner_pid 2>/dev/null || true
-        wait $spinner_pid 2>/dev/null || true
-        echo -e "\r ${RED}❌ Installation failed!${RESET}                                "
+        echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
 
         # Try installing packages individually to identify problematic ones
         warn_msg "Attempting to install packages individually..."
@@ -770,9 +609,9 @@ install_packages() {
         for pkg in "${deps[@]}"; do
             echo -ne "  Installing $pkg..."
             if eval "$install_cmd $pkg" >/dev/null 2>&1; then
-                echo -e " ${GREEN}✓${RESET}"
+                echo -e " ${GREEN}${ICON_SUCCESS}${RESET}"
             else
-                echo -e " ${RED}❌${RESET}"
+                echo -e " ${RED}${ICON_ERROR}${RESET}"
                 failed_packages+=("$pkg")
             fi
         done
@@ -824,31 +663,31 @@ download_with_progress() {
     local output="$2"
     local filename=$(basename "$url")
 
-    echo -ne "${CYAN}📥${RESET} Downloading ${BOLD}${filename}${RESET}..."
+    echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Downloading ${BOLD}${filename}${RESET}..."
 
-    # Download in background and show enhanced spinner
+    # Download in background and show spinner
     curl -sL "$url" -o "$output" &
     local curl_pid=$!
-    enhanced_spinner $curl_pid "Downloading $filename"
+    spinner $curl_pid
     wait $curl_pid
     local exit_code=$?
 
     if [ $exit_code -eq 0 ]; then
-        echo -e " ${GREEN}✓ Download completed!${RESET}"
+        echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
     else
-        echo -e " ${RED}❌ Download failed!${RESET}"
+        echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
         return 1
     fi
 }
 
 install_app() {
-    section_header "INSTALLATION PROCESS" "🚀"
+    section_header "INSTALLATION PROCESS" "${ICON_INSTALL}"
 
     # Check dependencies with enhanced system
     info_msg "Checking system dependencies..."
     check_dependencies
     verify_installation
-    echo -e "  ${GREEN}✓ All dependencies verified!${RESET}"
+    echo -e "  ${GREEN}${ICON_SUCCESS} All dependencies verified!${RESET}"
     echo
 
     # Version selection
@@ -856,48 +695,44 @@ install_app() {
     read -rn 1 ANSWER
     echo
 
-    # Replace the case statement with enhanced animations
-    case "${ANSWER,,}" in
-        p)
-            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
-            pulse_text "Fetching pre-release versions..." 1 0.2
-            ;;
-        a)
-            OWNER="grayankit"
-            REPO="Dartotsu-Downloader"
-            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-            pulse_text "Fetching alpha build..." 1 0.2
-            echo
-            compare_commits
-            ;;
-        s|"")
-            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-            pulse_text "Fetching stable release..." 1 0.2
-            ;;
-        *)
-            warn_msg "Invalid selection, defaulting to stable release..."
-            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-            ;;
-    esac
+# Replace the case statement with:
+case "${ANSWER,,}" in
+    p)
+        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
+        info_msg "Fetching pre-release versions..."
+        ;;
+    a)
+        OWNER="grayankit"
+        REPO="Dartotsu-Downloader"
+        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+        info_msg "Fetching alpha build..."
+        echo
+        compare_commits
+        ;;
+    s|"")
+        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+        info_msg "Fetching stable release..."
+        ;;
+    *)
+        warn_msg "Invalid selection, defaulting to stable release..."
+        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+        ;;
+esac
 
-    # Fetch release info with animation
-    enhanced_spinner $ "Fetching release information" &
-    local spinner_pid=$!
+    # Fetch release info
     ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
-    kill $spinner_pid 2>/dev/null || true
-    wait $spinner_pid 2>/dev/null || true
 
     if [ -z "$ASSET_URL" ]; then
         error_exit "No downloadable assets found in the release!"
     fi
 
-    # Download with enhanced progress
+    # Download
     echo
     if ! download_with_progress "$ASSET_URL" "/tmp/$APP_NAME.zip"; then
         error_exit "Download failed!"
     fi
 
-    # Installation with moving box animation
+    # Installation
     echo
     info_msg "Installing to ${BOLD}$INSTALL_DIR${RESET}..."
 
@@ -908,21 +743,11 @@ install_app() {
 
     mkdir -p "$INSTALL_DIR"
 
-    # Show moving box during extraction
-    moving_box_animation 50 4 2 0.05 &
-    local extract_anim_pid=$!
-    
+    echo -ne "${CYAN}${ICON_INSTALL}${RESET} Extracting files..."
     if unzip "/tmp/$APP_NAME.zip" -d "$INSTALL_DIR" > /dev/null 2>&1; then
-        kill $extract_anim_pid 2>/dev/null || true
-        wait $extract_anim_pid 2>/dev/null || true
-        # Clear animation
-        for ((i=0; i<6; i++)); do
-            printf "\033[1A\033[K"
-        done
-        echo -e "${GREEN}✓ Files extracted successfully!${RESET}"
+        echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
     else
-        kill $extract_anim_pid 2>/dev/null || true
-        wait $extract_anim_pid 2>/dev/null || true
+        echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
         error_exit "Failed to extract application files!"
     fi
 
@@ -938,23 +763,18 @@ install_app() {
     mkdir -p "$HOME/.local/bin"
     ln -sf "$APP_EXECUTABLE" "$LINK"
 
-    # Install icon with animation
-    enhanced_spinner $ "Installing icon" &
-    local icon_spinner_pid=$!
+    # Install icon
+    echo -ne "${CYAN}${ICON_DOWNLOAD}${RESET} Installing icon..."
     mkdir -p "$(dirname "$ICON_FILE")"
     fallback_icon_url='https://raw.githubusercontent.com/aayush2622/Dartotsu/main/assets/images/logo.png'
     if wget -q "$fallback_icon_url" -O "$ICON_FILE" 2>/dev/null; then
-        kill $icon_spinner_pid 2>/dev/null || true
-        wait $icon_spinner_pid 2>/dev/null || true
-        echo -e "\r ${GREEN}✓ Icon installed successfully!${RESET}                      "
+        echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
     else
-        kill $icon_spinner_pid 2>/dev/null || true
-        wait $icon_spinner_pid 2>/dev/null || true
-        echo -e "\r ${YELLOW}⚠️ Icon download failed (non-critical)${RESET}              "
+        echo -e " ${YELLOW}${ICON_WARNING} Icon download failed (non-critical)${RESET}"
     fi
 
     # Create desktop entry
-    echo -ne "${CYAN}🖥️${RESET} Creating desktop entry..."
+    echo -ne "${CYAN}${ICON_INSTALL}${RESET} Creating desktop entry..."
     mkdir -p "$(dirname "$DESKTOP_FILE")"
     cat > "$DESKTOP_FILE" <<EOL
 [Desktop Entry]
@@ -971,7 +791,7 @@ EOL
     if command -v update-desktop-database >/dev/null 2>&1; then
         update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
     fi
-    echo -e " ${GREEN}✓ Done!${RESET}"
+    echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
 
     # Create shell alias for easy updates
     add_updater_alias
@@ -989,7 +809,7 @@ EOL
 }
 
 uninstall_app() {
-    section_header "UNINSTALLATION PROCESS" "🗑️"
+    section_header "UNINSTALLATION PROCESS" "${ICON_UNINSTALL}"
 
     if [ ! -d "$INSTALL_DIR" ] && [ ! -L "$LINK" ]; then
         warn_msg "$APP_NAME doesn't appear to be installed!"
@@ -1012,36 +832,13 @@ uninstall_app() {
     fi
 
     echo
-    pulse_text "Removing $APP_NAME components..." 1 0.2
+    info_msg "Removing $APP_NAME components..."
 
-    # Remove components with animations
-    if [ -L "$LINK" ]; then
-        enhanced_spinner $ "Removing executable symlink" &
-        local spinner_pid=$!
-        rm -f "$LINK"
-        kill $spinner_pid 2>/dev/null || true
-        wait $spinner_pid 2>/dev/null || true
-        echo -e "\r  ${GREEN}✓ Executable symlink removed${RESET}                        "
-    fi
-
-    if [ -d "$INSTALL_DIR" ]; then
-        enhanced_spinner $ "Removing installation directory" &
-        local spinner_pid=$!
-        rm -rf "$INSTALL_DIR"
-        kill $spinner_pid 2>/dev/null || true
-        wait $spinner_pid 2>/dev/null || true
-        echo -e "\r  ${GREEN}✓ Installation directory removed${RESET}                    "
-    fi
-
-    if [ -f "$DESKTOP_FILE" ]; then
-        rm -f "$DESKTOP_FILE"
-        echo -e "  ${GREEN}✓ Desktop entry removed${RESET}"
-    fi
-
-    if [ -f "$ICON_FILE" ]; then
-        rm -f "$ICON_FILE"
-        echo -e "  ${GREEN}✓ Icon removed${RESET}"
-    fi
+    # Remove components
+    [ -L "$LINK" ] && rm -f "$LINK" && echo -e "  ${GREEN}✓${RESET} Executable symlink removed"
+    [ -d "$INSTALL_DIR" ] && rm -rf "$INSTALL_DIR" && echo -e "  ${GREEN}✓${RESET} Installation directory removed"
+    [ -f "$DESKTOP_FILE" ] && rm -f "$DESKTOP_FILE" && echo -e "  ${GREEN}✓${RESET} Desktop entry removed"
+    [ -f "$ICON_FILE" ] && rm -f "$ICON_FILE" && echo -e "  ${GREEN}✓${RESET} Icon removed"
 
     if command -v update-desktop-database >/dev/null 2>&1; then
         update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
@@ -1056,7 +853,7 @@ uninstall_app() {
 }
 
 update_app() {
-    section_header "UPDATE PROCESS" "🔄"
+    section_header "UPDATE PROCESS" "${ICON_UPDATE}"
 
     if [ ! -d "$INSTALL_DIR" ] && [ ! -L "$LINK" ]; then
         warn_msg "$APP_NAME doesn't appear to be installed!"
@@ -1073,7 +870,7 @@ update_app() {
         return
     fi
 
-    pulse_text "Updating $APP_NAME to the latest version..." 1 0.2
+    info_msg "Updating $APP_NAME to the latest version..."
     echo
     install_app
 
@@ -1085,12 +882,50 @@ update_app() {
 # 🚀 MAIN SCRIPT
 # =============================================================================
 
+# <<< MODIFIED LOOP: Integrates the animated border >>>
 main_loop() {
+    # Trap Ctrl+C to ensure we cleanup properly
+    trap 'tput cnorm; clear; exit 1' SIGINT
+
     while true; do
         show_banner
-        show_menu
+
+        # Get the menu content as a string
+        local menu_content
+        menu_content=$(get_menu_content)
+
+        # Save cursor position before starting animation
+        tput sc
+
+        # Start the animation and get its Process ID
+        local anim_pid
+        anim_pid=$(animated_box_start "$menu_content")
+
+        # Restore cursor, move inside the box area, and print the menu
+        tput rc
+        tput cud 1 # Move down 1 line to be inside the top border
+        while IFS= read -r line; do
+            tput cuf 2 # Move right 2 columns to be inside the left border
+            echo -e "$line"
+        done <<< "$menu_content"
+
+        # Position cursor for the prompt below the menu
+        tput rc
+        local height
+        height=$(echo "$menu_content" | wc -l)
+        tput cud "$((height + 3))" # Move below the box
+
+        # Show prompt and read user input
+        echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/Q)${RESET} ${ICON_MAGIC}: "
         read -rn 1 ACTION
-        echo
+
+        # --- Cleanup ---
+        # Stop the background animation process
+        kill "$anim_pid" 2>/dev/null
+        wait "$anim_pid" 2>/dev/null # Suppress "Terminated" message
+        # Restore cursor visibility
+        tput cnorm
+        echo # Newline after input
 
         case "${ACTION,,}" in
             i|install)
@@ -1104,7 +939,7 @@ main_loop() {
                 ;;
             q|quit|exit)
                 echo
-                type_text_enhanced "Thanks for using Dartotsu Installer! ✨" 0.05
+                type_text "Thanks for using Dartotsu Installer! ${ICON_SPARKLES}" 0.05
                 echo -e "${GRAY}${DIM}Goodbye!${RESET}"
                 exit 0
                 ;;
@@ -1146,6 +981,6 @@ elif [ -t 0 ]; then
     # Interactive mode - show menu
     main_loop
 else
-    # Fallback to interactive mode
+    # Fallback to interactive mode (e.g., if piped)
     main_loop
 fi
