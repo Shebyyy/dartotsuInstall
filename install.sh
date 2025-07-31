@@ -142,17 +142,19 @@ compare_commits() {
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET} ${ICON_GALAXY} ${BOLD}MAIN REPOSITORY${RESET} ${GRAY}(${main_repo})${RESET}          ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_DIAMOND} Commit SHA: ${YELLOW}${BOLD}${main_commit}${RESET}                           ${PURPLE}${BOLD}║${RESET}"
+    local formatted_main_date=$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC')
     echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_STAR} Author: ${CYAN}${main_author}${RESET}                              ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}  ${PURPLE}${BOLD}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_COMET} Timestamp: ${GRAY}${formatted_main_date}${RESET}  ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET} ${ICON_ALIEN} ${BOLD}ALPHA REPOSITORY${RESET} ${GRAY}(${alpha_repo})${RESET} ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_BOMB} Release Tag: ${PURPLE}${BOLD}${alpha_tag}${RESET}                            ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_GHOST} Published: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}    ${PURPLE}${BOLD}║${RESET}"
+    local formatted_alpha_date=$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC')
+    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_GHOST} Published: ${GRAY}${formatted_alpha_date}${RESET}    ${PURPLE}${BOLD}║${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
 
     # Sync status with epic effects
     if [[ "$alpha_tag" == *"$main_commit"* ]]; then
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_MAGIC} SYNC STATUS: ${GREEN}${BOLD}${ICON_FIRE} PERFECTLY SYNCHRONIZED ${ICON_FIRE}${RESET}   ${PURPLE}${BOLD}║${RESET}"
+        echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_MAGIC} SYNC STATUS: ${GREEN}${BOLD}${ICON_FIRE} PERFECTLY SATELLITE ${ICON_FIRE}${RESET}   ${PURPLE}${BOLD}║${RESET}"
         echo -e "${BOLD}${PURPLE}║${RESET}   ${GREEN}${ICON_LIGHTNING} Repositories are in perfect harmony! ${ICON_LIGHTNING}${RESET}           ${PURPLE}${BOLD}║${RESET}"
     else
         echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_CRYSTAL} SYNC STATUS: ${YELLOW}${BOLD}${ICON_SWORD} DIVERGED TIMELINES ${ICON_SWORD}${RESET}     ${PURPLE}${BOLD}║${RESET}"
@@ -308,52 +310,49 @@ version_menu() {
 # =============================================================================
 
 detect_shell_rc() {
-  local shell_name
-  shell_name=$(basename "$SHELL")
-  case "$shell_name" in
-    bash) echo "$HOME/.bashrc" ;;
-    zsh) echo "$HOME/.zshrc" ;;
-    fish) echo "$HOME/.config/fish/config.fish" ;;
-    *) echo "$HOME/.profile" ;;
-  esac
+    local shell_name
+    shell_name=$(basename "$SHELL")
+    case "$shell_name" in
+        bash) echo "$HOME/.bashrc" ;;
+        zsh) echo "$HOME/.zshrc" ;;
+        fish) echo "$HOME/.config/fish/config.fish" ;;
+        *) echo "$HOME/.profile" ;;
+    esac
 }
 
 add_updater_alias() {
-  local shell_rc
-  shell_rc=$(detect_shell_rc)
-  local alias_line="alias dartotsu-updater='bash <(curl -s https://raw.githubusercontent.com/aayush2622/Dartotsu/main/scripts/install.sh) update'"
+    local shell_rc
+    shell_rc=$(detect_shell_rc)
+    local alias_line="alias dartotsu-updater='bash <(curl -s https://raw.githubusercontent.com/aayush2622/Dartotsu/main/scripts/install.sh) update'"
 
-  if grep -Fxq "$alias_line" "$shell_rc" 2>/dev/null; then
-    echo -ne "${YELLOW}${ICON_WARNING}${RESET} The 'dartotsu-updater' alias already exists in your shell config file ($(basename "$shell_rc")). Would you like to remove it? [y/N]: "
-    read -r remove_response
-    case "$remove_response" in
-      [yY][eE][sS]|[yY])
-        sed -i "\|$alias_line|d" "$shell_rc"
-        echo -e " ${GREEN}${ICON_SUCCESS} Alias removed from $(basename "$shell_rc")${RESET}"
-        ;;
-      *)
-        echo -e " ${CYAN}${ICON_INFO} Keeping existing alias.${RESET}"
-        ;;
-    esac
-  else
-    echo -ne "${CYAN}${ICON_MAGIC}${RESET} Would you like to add the 'dartotsu-updater' alias to your shell config file ($(basename "$shell_rc"))? [y/N]: "
-    read -r add_response
-    case "$add_response" in
-      [yY][eE][sS]|[yY])
-        echo "$alias_line" >> "$shell_rc"
-        echo -e " ${GREEN}${ICON_SUCCESS} Alias added to $(basename "$shell_rc")${RESET}"
-        info_msg "You can now run '${BOLD}dartotsu-updater${RESET}' to update anytime!"
-        info_msg "Run '${BOLD}source $shell_rc${RESET}' or restart your terminal to activate the alias"
-        ;;
-      *)
-        echo -e " ${YELLOW}${ICON_WARNING} Skipped adding alias${RESET}"
-        ;;
-    esac
-  fi
+    if grep -Fxq "$alias_line" "$shell_rc" 2>/dev/null; then
+        echo -ne "${YELLOW}${ICON_WARNING}${RESET} The 'dartotsu-updater' alias already exists in your shell config file ($(basename "$shell_rc")). Would you like to remove it? [y/N]: "
+        read -r remove_response
+        case "$remove_response" in
+            [yY][eE][sS]|[yY])
+                sed -i "\|$alias_line|d" "$shell_rc"
+                echo -e " ${GREEN}${ICON_SUCCESS} Alias removed from $(basename "$shell_rc")${RESET}"
+                ;;
+            *)
+                echo -e " ${CYAN}${ICON_INFO} Keeping existing alias.${RESET}"
+                ;;
+        esac
+    else
+        echo -ne "${CYAN}${ICON_MAGIC}${RESET} Would you like to add the 'dartotsu-updater' alias to your shell config file ($(basename "$shell_rc"))? [y/N]: "
+        read -r add_response
+        case "$add_response" in
+            [yY][eE][sS]|[yY])
+                echo "$alias_line" >> "$shell_rc"
+                echo -e " ${GREEN}${ICON_SUCCESS} Alias added to $(basename "$shell_rc")${RESET}"
+                info_msg "You can now run '${BOLD}dartotsu-updater${RESET}' to update anytime!"
+                info_msg "Run '${BOLD}source $shell_rc${RESET}' or restart your terminal to activate the alias"
+                ;;
+            *)
+                echo -e " ${YELLOW}${ICON_WARNING} Skipped adding alias${RESET}"
+                ;;
+        esac
+    fi
 }
-
-
-
 
 # =============================================================================
 # 🛠️ ENHANCED DEPENDENCY MANAGEMENT
@@ -564,7 +563,7 @@ verify_installation() {
 }
 
 # =============================================================================
-# 🛠️  CORE FUNCTIONS
+# 🛠️ CORE FUNCTIONS
 # =============================================================================
 
 error_exit() {
@@ -611,29 +610,28 @@ install_app() {
     read -rn 1 ANSWER
     echo
 
-# Replace the case statement with:
-case "${ANSWER,,}" in
-    p)
-        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
-        info_msg "Fetching pre-release versions..."
-        ;;
-    a)
-        OWNER="grayankit"
-        REPO="Dartotsu-Downloader"
-        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-        info_msg "Fetching alpha build..."
-        echo
-        compare_commits
-        ;;
-    s|"")
-        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-        info_msg "Fetching stable release..."
-        ;;
-    *)
-        warn_msg "Invalid selection, defaulting to stable release..."
-        API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-        ;;
-esac
+    case "${ANSWER,,}" in
+        p)
+            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases"
+            info_msg "Fetching pre-release versions..."
+            ;;
+        a)
+            OWNER="grayankit"
+            REPO="Dartotsu-Downloader"
+            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+            info_msg "Fetching alpha build..."
+            echo
+            compare_commits
+            ;;
+        s|"")
+            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+            info_msg "Fetching stable release..."
+            ;;
+        *)
+            warn_msg "Invalid selection, defaulting to stable release..."
+            API_URL="https://api.github.com/repos/$OWNER/$REPO/releases/latest"
+            ;;
+    esac
 
     # Fetch release info
     ASSET_URL=$(curl -s "$API_URL" | grep browser_download_url | cut -d '"' -f 4 | grep .zip | head -n 1)
@@ -660,7 +658,7 @@ esac
     mkdir -p "$INSTALL_DIR"
 
     echo -ne "${CYAN}${ICON_INSTALL}${RESET} Extracting files..."
-    if unzip "/tmp/$APP_NAME.zip" -d "$INSTALL_DIR" > /dev/null 2>&1; then
+    if unzip "/tmp/$APP_NAME.zip" -d "$INSTALL_DIR" >/dev/null 2>&1; then
         echo -e " ${GREEN}${ICON_SUCCESS} Done!${RESET}"
     else
         echo -e " ${RED}${ICON_ERROR} Failed!${RESET}"
