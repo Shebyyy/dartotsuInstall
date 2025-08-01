@@ -147,30 +147,48 @@ compare_commits() {
     local alpha_tag=$(echo "$alpha_release" | grep '"tag_name"' | cut -d '"' -f 4)
     local alpha_date=$(echo "$alpha_release" | grep '"published_at"' | cut -d '"' -f 4)
     echo
-    echo -e "${BOLD}${PURPLE}╔═══════════════════════════════════════════════════════════════╗${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}                    ${ICON_CRYSTAL} COMMIT MATRIX ${ICON_CRYSTAL}                    ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}╠═══════════════════════════════════════════════════════════════╣${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET} ${ICON_GALAXY} ${BOLD}MAIN REPOSITORY${RESET} ${GRAY}(${main_repo})${RESET}          ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_DIAMOND} Commit SHA: ${YELLOW}${BOLD}${main_commit}${RESET}                           ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_STAR} Author: ${CYAN}${main_author}${RESET}                              ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}  ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET} ${ICON_ALIEN} ${BOLD}ALPHA REPOSITORY${RESET} ${GRAY}(${alpha_repo})${RESET} ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_BOMB} Release Tag: ${PURPLE}${BOLD}${alpha_tag}${RESET}                            ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_GHOST} Published: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}    ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
+    # Box drawing function
+    draw_box() {
+        local title="$1"
+        local content="$2"
+        local width=65
+        local padding=$(( (width - ${#title}) / 2 ))
+        
+        echo -e "${BOLD}${PURPLE}╔$(printf '═%.0s' $(seq 1 $width))╗${RESET}"
+        echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 $padding))${BOLD}${WHITE}$title${RESET}$(printf ' %.0s' $(seq 1 $((width - padding - ${#title}))))${BOLD}${PURPLE}║${RESET}"
+        echo -e "${BOLD}${PURPLE}╠$(printf '═%.0s' $(seq 1 $width))╣${RESET}"
+        echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 $width))${BOLD}${PURPLE}║${RESET}"
+        echo -e "$content"
+        echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 $width))${BOLD}${PURPLE}║${RESET}"
+        echo -e "${BOLD}${PURPLE}╚$(printf '═%.0s' $(seq 1 $width))╝${RESET}"
+    }
+    
+    # Format content
+    local content=""
+    content+="${BOLD}${PURPLE}║${RESET} ${ICON_GALAXY} ${BOLD}MAIN REPOSITORY${RESET} ${GRAY}(${main_repo})${RESET}$(printf ' %.0s' $(seq 1 $((65 - 35 - ${#main_repo}))))${BOLD}${PURPLE}║${RESET}\n"
+    content+="${BOLD}${PURPLE}║${RESET}   ${ICON_DIAMOND} Commit SHA: ${YELLOW}${BOLD}${main_commit}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 35 - 7))))${BOLD}${PURPLE}║${RESET}\n"
+    content+="${BOLD}${PURPLE}║${RESET}   ${ICON_STAR} Author: ${CYAN}${main_author}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 25 - ${#main_author}))))${BOLD}${PURPLE}║${RESET}\n"
+    content+="${BOLD}${PURPLE}║${RESET}   ${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}$(printf ' %.0s' $(seq 1 $((65 - 50 - 20))))${BOLD}${PURPLE}║${RESET}\n"
+    content+="${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 65))${BOLD}${PURPLE}║${RESET}\n"
+    content+="${BOLD}${PURPLE}║${RESET} ${ICON_ALIEN} ${BOLD}ALPHA REPOSITORY${RESET} ${GRAY}(${alpha_repo})${RESET}$(printf ' %.0s' $(seq 1 $((65 - 37 - ${#alpha_repo}))))${BOLD}${PURPLE}║${RESET}\n"
+    content+="${BOLD}${PURPLE}║${RESET}   ${ICON_BOMB} Release Tag: ${PURPLE}${BOLD}${alpha_tag}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 35 - ${#alpha_tag}))))${BOLD}${PURPLE}║${RESET}\n"
+    content+="${BOLD}${PURPLE}║${RESET}   ${ICON_GHOST} Published: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}$(printf ' %.0s' $(seq 1 $((65 - 48 - 20))))${BOLD}${PURPLE}║${RESET}\n"
+    content+="${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 65))${BOLD}${PURPLE}║${RESET}\n"
+    
     # Sync status with epic effects
     if [[ "$alpha_tag" == *"$main_commit"* ]]; then
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_MAGIC} SYNC STATUS: ${GREEN}${BOLD}${ICON_FIRE} PERFECTLY SYNCHRONIZED ${ICON_FIRE}${RESET}   ${PURPLE}${BOLD}║${RESET}"
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${GREEN}${ICON_LIGHTNING} Repositories are in perfect harmony! ${ICON_LIGHTNING}${RESET}           ${PURPLE}${BOLD}║${RESET}"
+        content+="${BOLD}${PURPLE}║${RESET}   ${ICON_MAGIC} SYNC STATUS: ${GREEN}${BOLD}${ICON_FIRE} PERFECTLY SYNCHRONIZED ${ICON_FIRE}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 60))))${BOLD}${PURPLE}║${RESET}\n"
+        content+="${BOLD}${PURPLE}║${RESET}   ${GREEN}${ICON_LIGHTNING} Repositories are in perfect harmony! ${ICON_LIGHTNING}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 58))))${BOLD}${PURPLE}║${RESET}\n"
     else
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${ICON_CRYSTAL} SYNC STATUS: ${YELLOW}${BOLD}${ICON_SWORD} DIVERGED TIMELINES ${ICON_SWORD}${RESET}     ${PURPLE}${BOLD}║${RESET}"
-        echo -e "${BOLD}${PURPLE}║${RESET}   ${YELLOW}${ICON_SKULL} Alpha may contain different features ${ICON_SKULL}${RESET}            ${PURPLE}${BOLD}║${RESET}"
+        content+="${BOLD}${PURPLE}║${RESET}   ${ICON_CRYSTAL} SYNC STATUS: ${YELLOW}${BOLD}${ICON_SWORD} DIVERGED TIMELINES ${ICON_SWORD}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 55))))${BOLD}${PURPLE}║${RESET}\n"
+        content+="${BOLD}${PURPLE}║${RESET}   ${YELLOW}${ICON_SKULL} Alpha may contain different features ${ICON_SKULL}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 56))))${BOLD}${PURPLE}║${RESET}\n"
     fi
-    echo -e "${BOLD}${PURPLE}║${RESET}                                                         ${PURPLE}${BOLD}║${RESET}"
-    echo -e "${BOLD}${PURPLE}╚═══════════════════════════════════════════════════════════════╝${RESET}"
+    content+="${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 65))${BOLD}${PURPLE}║${RESET}"
+    
+    # Draw the box
+    draw_box "${ICON_CRYSTAL} COMMIT MATRIX ${ICON_CRYSTAL}" "$content"
     echo
+    
     # Cool countdown
     echo -ne "${BOLD}${CYAN}Preparing alpha download in: ${RESET}"
     for i in 3 2 1; do
@@ -256,6 +274,8 @@ show_menu() {
     # Glitch effect
     echo -e "${GRAD1}█${GRAD2}█${GRAD3}█${GRAD4}█${GRAD5}█${GRAD6}█${RESET} ${BOLD}DARTOTSU CONTROL PANEL${RESET} ${GRAD6}█${GRAD5}█${GRAD4}█${GRAD3}█${GRAD2}█${GRAD1}█${RESET}"
     echo
+    
+    # Menu box
     echo -e "${BOLD}${CYAN}╔═══════════════════════════════════════════════════════╗${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${GREEN}${BOLD}[I]${RESET} ${ICON_DOWNLOAD} Install Dartotsu ${GRAY}(Get Started)${RESET}      ${CYAN}${BOLD}║${RESET}"
@@ -284,6 +304,8 @@ version_menu() {
     done
     echo
     echo
+    
+    # Version box
     echo -e "${BOLD}${GRAD2}╔═══════════════════════════════════════════════════════╗${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_CROWN} ${GREEN}${BOLD}[S]${RESET} Stable Release ${GRAY}(Battle-Tested)${RESET}         ${GRAD2}${BOLD}║${RESET}"
