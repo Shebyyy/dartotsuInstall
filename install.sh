@@ -153,9 +153,9 @@ compare_commits() {
     local content_width=$((box_width - 2))
     
     # Draw commit matrix box
-    echo -e "${BOLD}${PURPLE}╔$(printf '═%.0s' $(seq 1 $box_width))╗${RESET}"
+    echo -e "${BOLD}${PURPLE}╔$(printf '%*s' $box_width | tr ' ' '═')╗${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %*s' $(( (content_width - 25) / 2 )) '')${BOLD}${WHITE}COMMIT MATRIX${RESET}$(printf ' %*s' $(( (content_width - 25) / 2 )) '')${BOLD}${PURPLE}║${RESET}"
-    echo -e "${BOLD}${PURPLE}╠$(printf '═%.0s' $(seq 1 $box_width))╣${RESET}"
+    echo -e "${BOLD}${PURPLE}╠$(printf '%*s' $box_width | tr ' ' '═')╣${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${PURPLE}║${RESET}"
     
     # Main repository info
@@ -199,7 +199,7 @@ compare_commits() {
     fi
     
     echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${PURPLE}║${RESET}"
-    echo -e "${BOLD}${PURPLE}╚$(printf '═%.0s' $(seq 1 $box_width))╝${RESET}"
+    echo -e "${BOLD}${PURPLE}╚$(printf '%*s' $box_width | tr ' ' '═')╝${RESET}"
     echo
     
     # Cool countdown
@@ -251,9 +251,9 @@ section_header() {
     local box_width=53
     local content_width=$((box_width - 2))
     echo
-    echo -e "${BOLD}${BLUE}╭$(printf '─%.0s' $(seq 1 $box_width))╮${RESET}"
+    echo -e "${BOLD}${BLUE}╭$(printf '%*s' $box_width | tr ' ' '─')╮${RESET}"
     echo -e "${BOLD}${BLUE}│${RESET} ${icon} ${BOLD}${WHITE}${title}${RESET} $(printf ' %*s' $((content_width - ${#title} - 3)) '')${BOLD}${BLUE}│${RESET}"
-    echo -e "${BOLD}${BLUE}╰$(printf '─%.0s' $(seq 1 $box_width))╯${RESET}"
+    echo -e "${BOLD}${BLUE}╰$(printf '%*s' $box_width | tr ' ' '─')╯${RESET}"
     echo
 }
 # Success message with animation
@@ -262,9 +262,9 @@ success_msg() {
     local box_width=52
     local content_width=$((box_width - 2))
     echo
-    echo -e "${GREEN}${BOLD}┌─ SUCCESS! ─$(printf '─%.0s' $(seq 1 $((box_width - 12)))─┐${RESET}"
+    echo -e "${GREEN}${BOLD}┌─ SUCCESS! ─$(printf '%*s' $((box_width - 12)) | tr ' ' '─')┐${RESET}"
     echo -e "${GREEN}${BOLD}│${RESET} ${ICON_SUCCESS} ${msg} $(printf ' %*s' $((content_width - ${#msg} - 3)) '')${GREEN}${BOLD}│${RESET}"
-    echo -e "${GREEN}${BOLD}└$(printf '─%.0s' $(seq 1 $box_width))─┘${RESET}"
+    echo -e "${GREEN}${BOLD}└$(printf '%*s' $box_width | tr ' ' '─')─┘${RESET}"
     echo
 }
 # Error message
@@ -273,9 +273,9 @@ error_msg() {
     local box_width=50
     local content_width=$((box_width - 2))
     echo
-    echo -e "${RED}${BOLD}┌─ ERROR! ─$(printf '─%.0s' $(seq 1 $((box_width - 10)))─┐${RESET}"
+    echo -e "${RED}${BOLD}┌─ ERROR! ─$(printf '%*s' $((box_width - 10)) | tr ' ' '─')┐${RESET}"
     echo -e "${RED}${BOLD}│${RESET} ${ICON_ERROR} ${msg} $(printf ' %*s' $((content_width - ${#msg} - 3)) '')${RED}${BOLD}│${RESET}"
-    echo -e "${RED}${BOLD}└$(printf '─%.0s' $(seq 1 $box_width))─┘${RESET}"
+    echo -e "${RED}${BOLD}└$(printf '%*s' $box_width | tr ' ' '─')─┘${RESET}"
     echo
 }
 # Info message
@@ -298,7 +298,7 @@ show_menu() {
     local box_width=57
     local content_width=$((box_width - 2))
     
-    echo -e "${BOLD}${CYAN}╔$(printf '═%.0s' $(seq 1 $box_width))╗${RESET}"
+    echo -e "${BOLD}${CYAN}╔$(printf '%*s' $box_width | tr ' ' '═')╗${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${CYAN}║${RESET}"
     
     # Install option
@@ -332,7 +332,7 @@ show_menu() {
     echo -e "${BOLD}${CYAN}║${RESET}${quit_desc}$(printf ' %*s' $((content_width - ${#quit_desc})) '')${BOLD}${CYAN}║${RESET}"
     
     echo -e "${BOLD}${CYAN}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${CYAN}║${RESET}"
-    echo -e "${BOLD}${CYAN}╚$(printf '═%.0s' $(seq 1 $box_width))╝${RESET}"
+    echo -e "${BOLD}${CYAN}╚$(printf '%*s' $box_width | tr ' ' '═')╝${RESET}"
     echo
     echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/Q)${RESET} ${ICON_MAGIC}: "
 }
@@ -351,7 +351,7 @@ version_menu() {
     local box_width=57
     local content_width=$((box_width - 2))
     
-    echo -e "${BOLD}${GRAD2}╔$(printf '═%.0s' $(seq 1 $box_width))╗${RESET}"
+    echo -e "${BOLD}${GRAD2}╔$(printf '%*s' $box_width | tr ' ' '═')╗${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${GRAD2}║${RESET}"
     
     # Stable option
@@ -377,7 +377,7 @@ version_menu() {
     echo -e "${BOLD}${GRAD2}║${RESET}${alpha_desc}$(printf ' %*s' $((content_width - ${#alpha_desc})) '')${BOLD}${GRAD2}║${RESET}"
     
     echo -e "${BOLD}${GRAD2}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${GRAD2}║${RESET}"
-    echo -e "${BOLD}${GRAD2}╚$(printf '═%.0s' $(seq 1 $box_width))╝${RESET}"
+    echo -e "${BOLD}${GRAD2}╚$(printf '%*s' $box_width | tr ' ' '═')╝${RESET}"
     echo
     echo -ne "${BOLD}${WHITE}Choose your destiny${RESET} ${GRAY}(S/P/A)${RESET} ${ICON_MAGIC}: "
 }
