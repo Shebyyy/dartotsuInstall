@@ -147,46 +147,56 @@ compare_commits() {
     local alpha_tag=$(echo "$alpha_release" | grep '"tag_name"' | cut -d '"' -f 4)
     local alpha_date=$(echo "$alpha_release" | grep '"published_at"' | cut -d '"' -f 4)
     echo
-    # Box drawing function
-    draw_box() {
-        local title="$1"
-        local content="$2"
-        local width=65
-        local padding=$(( (width - ${#title}) / 2 ))
-        
-        echo -e "${BOLD}${PURPLE}╔$(printf '═%.0s' $(seq 1 $width))╗${RESET}"
-        echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 $padding))${BOLD}${WHITE}$title${RESET}$(printf ' %.0s' $(seq 1 $((width - padding - ${#title}))))${BOLD}${PURPLE}║${RESET}"
-        echo -e "${BOLD}${PURPLE}╠$(printf '═%.0s' $(seq 1 $width))╣${RESET}"
-        echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 $width))${BOLD}${PURPLE}║${RESET}"
-        echo -e "$content"
-        echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 $width))${BOLD}${PURPLE}║${RESET}"
-        echo -e "${BOLD}${PURPLE}╚$(printf '═%.0s' $(seq 1 $width))╝${RESET}"
-    }
     
-    # Format content
-    local content=""
-    content+="${BOLD}${PURPLE}║${RESET} ${ICON_GALAXY} ${BOLD}MAIN REPOSITORY${RESET} ${GRAY}(${main_repo})${RESET}$(printf ' %.0s' $(seq 1 $((65 - 35 - ${#main_repo}))))${BOLD}${PURPLE}║${RESET}\n"
-    content+="${BOLD}${PURPLE}║${RESET}   ${ICON_DIAMOND} Commit SHA: ${YELLOW}${BOLD}${main_commit}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 35 - 7))))${BOLD}${PURPLE}║${RESET}\n"
-    content+="${BOLD}${PURPLE}║${RESET}   ${ICON_STAR} Author: ${CYAN}${main_author}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 25 - ${#main_author}))))${BOLD}${PURPLE}║${RESET}\n"
-    content+="${BOLD}${PURPLE}║${RESET}   ${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}$(printf ' %.0s' $(seq 1 $((65 - 50 - 20))))${BOLD}${PURPLE}║${RESET}\n"
-    content+="${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 65))${BOLD}${PURPLE}║${RESET}\n"
-    content+="${BOLD}${PURPLE}║${RESET} ${ICON_ALIEN} ${BOLD}ALPHA REPOSITORY${RESET} ${GRAY}(${alpha_repo})${RESET}$(printf ' %.0s' $(seq 1 $((65 - 37 - ${#alpha_repo}))))${BOLD}${PURPLE}║${RESET}\n"
-    content+="${BOLD}${PURPLE}║${RESET}   ${ICON_BOMB} Release Tag: ${PURPLE}${BOLD}${alpha_tag}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 35 - ${#alpha_tag}))))${BOLD}${PURPLE}║${RESET}\n"
-    content+="${BOLD}${PURPLE}║${RESET}   ${ICON_GHOST} Published: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}$(printf ' %.0s' $(seq 1 $((65 - 48 - 20))))${BOLD}${PURPLE}║${RESET}\n"
-    content+="${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 65))${BOLD}${PURPLE}║${RESET}\n"
+    # Draw commit matrix box with ASCII characters
+    local box_width=65
+    echo -e "${BOLD}${PURPLE}+$(printf '%*s' $box_width | tr ' ' '-')+${RESET}"
+    echo -e "${BOLD}${PURPLE}|${RESET}$(printf ' %*s' $(( (box_width - 25) / 2 )) '')${BOLD}${WHITE}COMMIT MATRIX${RESET}$(printf ' %*s' $(( (box_width - 25) / 2 )) '')${BOLD}${PURPLE}|${RESET}"
+    echo -e "${BOLD}${PURPLE}+$(printf '%*s' $box_width | tr ' ' '-')+${RESET}"
+    echo -e "${BOLD}${PURPLE}|${RESET}$(printf ' %*s' $box_width '')${BOLD}${PURPLE}|${RESET}"
     
-    # Sync status with epic effects
+    # Main repository info
+    local main_repo_line=" ${ICON_GALAXY} ${BOLD}MAIN REPOSITORY${RESET} ${GRAY}(${main_repo})${RESET}"
+    echo -e "${BOLD}${PURPLE}|${RESET}${main_repo_line}$(printf ' %*s' $((box_width - ${#main_repo_line})) '')${BOLD}${PURPLE}|${RESET}"
+    
+    local commit_line="   ${ICON_DIAMOND} Commit SHA: ${YELLOW}${BOLD}${main_commit}${RESET}"
+    echo -e "${BOLD}${PURPLE}|${RESET}${commit_line}$(printf ' %*s' $((box_width - ${#commit_line})) '')${BOLD}${PURPLE}|${RESET}"
+    
+    local author_line="   ${ICON_STAR} Author: ${CYAN}${main_author}${RESET}"
+    echo -e "${BOLD}${PURPLE}|${RESET}${author_line}$(printf ' %*s' $((box_width - ${#author_line})) '')${BOLD}${PURPLE}|${RESET}"
+    
+    local timestamp_line="   ${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}"
+    echo -e "${BOLD}${PURPLE}|${RESET}${timestamp_line}$(printf ' %*s' $((box_width - ${#timestamp_line})) '')${BOLD}${PURPLE}|${RESET}"
+    
+    echo -e "${BOLD}${PURPLE}|${RESET}$(printf ' %*s' $box_width '')${BOLD}${PURPLE}|${RESET}"
+    
+    # Alpha repository info
+    local alpha_repo_line=" ${ICON_ALIEN} ${BOLD}ALPHA REPOSITORY${RESET} ${GRAY}(${alpha_repo})${RESET}"
+    echo -e "${BOLD}${PURPLE}|${RESET}${alpha_repo_line}$(printf ' %*s' $((box_width - ${#alpha_repo_line})) '')${BOLD}${PURPLE}|${RESET}"
+    
+    local tag_line="   ${ICON_BOMB} Release Tag: ${PURPLE}${BOLD}${alpha_tag}${RESET}"
+    echo -e "${BOLD}${PURPLE}|${RESET}${tag_line}$(printf ' %*s' $((box_width - ${#tag_line})) '')${BOLD}${PURPLE}|${RESET}"
+    
+    local published_line="   ${ICON_GHOST} Published: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}"
+    echo -e "${BOLD}${PURPLE}|${RESET}${published_line}$(printf ' %*s' $((box_width - ${#published_line})) '')${BOLD}${PURPLE}|${RESET}"
+    
+    echo -e "${BOLD}${PURPLE}|${RESET}$(printf ' %*s' $box_width '')${BOLD}${PURPLE}|${RESET}"
+    
+    # Sync status
     if [[ "$alpha_tag" == *"$main_commit"* ]]; then
-        content+="${BOLD}${PURPLE}║${RESET}   ${ICON_MAGIC} SYNC STATUS: ${GREEN}${BOLD}${ICON_FIRE} PERFECTLY SYNCHRONIZED ${ICON_FIRE}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 60))))${BOLD}${PURPLE}║${RESET}\n"
-        content+="${BOLD}${PURPLE}║${RESET}   ${GREEN}${ICON_LIGHTNING} Repositories are in perfect harmony! ${ICON_LIGHTNING}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 58))))${BOLD}${PURPLE}║${RESET}\n"
+        local sync_line="   ${ICON_MAGIC} SYNC STATUS: ${GREEN}${BOLD}${ICON_FIRE} PERFECTLY SYNCHRONIZED ${ICON_FIRE}${RESET}"
+        echo -e "${BOLD}${PURPLE}|${RESET}${sync_line}$(printf ' %*s' $((box_width - ${#sync_line})) '')${BOLD}${PURPLE}|${RESET}"
+        local harmony_line="   ${GREEN}${ICON_LIGHTNING} Repositories are in perfect harmony! ${ICON_LIGHTNING}${RESET}"
+        echo -e "${BOLD}${PURPLE}|${RESET}${harmony_line}$(printf ' %*s' $((box_width - ${#harmony_line})) '')${BOLD}${PURPLE}|${RESET}"
     else
-        content+="${BOLD}${PURPLE}║${RESET}   ${ICON_CRYSTAL} SYNC STATUS: ${YELLOW}${BOLD}${ICON_SWORD} DIVERGED TIMELINES ${ICON_SWORD}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 55))))${BOLD}${PURPLE}║${RESET}\n"
-        content+="${BOLD}${PURPLE}║${RESET}   ${YELLOW}${ICON_SKULL} Alpha may contain different features ${ICON_SKULL}${RESET}$(printf ' %.0s' $(seq 1 $((65 - 56))))${BOLD}${PURPLE}║${RESET}\n"
+        local sync_line="   ${ICON_CRYSTAL} SYNC STATUS: ${YELLOW}${BOLD}${ICON_SWORD} DIVERGED TIMELINES ${ICON_SWORD}${RESET}"
+        echo -e "${BOLD}${PURPLE}|${RESET}${sync_line}$(printf ' %*s' $((box_width - ${#sync_line})) '')${BOLD}${PURPLE}|${RESET}"
+        local features_line="   ${YELLOW}${ICON_SKULL} Alpha may contain different features ${ICON_SKULL}${RESET}"
+        echo -e "${BOLD}${PURPLE}|${RESET}${features_line}$(printf ' %*s' $((box_width - ${#features_line})) '')${BOLD}${PURPLE}|${RESET}"
     fi
-    content+="${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 65))${BOLD}${PURPLE}║${RESET}"
     
-    # Draw the box
-    draw_box "${ICON_CRYSTAL} COMMIT MATRIX ${ICON_CRYSTAL}" "$content"
+    echo -e "${BOLD}${PURPLE}|${RESET}$(printf ' %*s' $box_width '')${BOLD}${PURPLE}|${RESET}"
+    echo -e "${BOLD}${PURPLE}+$(printf '%*s' $box_width | tr ' ' '-')+${RESET}"
     echo
     
     # Cool countdown
@@ -236,27 +246,27 @@ section_header() {
     local title="$1"
     local icon="$2"
     echo
-    echo -e "${BOLD}${BLUE}╭─────────────────────────────────────────────────────╮${RESET}"
-    echo -e "${BOLD}${BLUE}│${RESET} ${icon} ${BOLD}${WHITE}${title}${RESET} ${BLUE}│${RESET}"
-    echo -e "${BOLD}${BLUE}╰─────────────────────────────────────────────────────╯${RESET}"
+    echo -e "${BOLD}${BLUE}+$(printf '%.0s-' {1..51})+${RESET}"
+    echo -e "${BOLD}${BLUE}|${RESET} ${icon} ${BOLD}${WHITE}${title}${RESET} ${BLUE}|${RESET}"
+    echo -e "${BOLD}${BLUE}+$(printf '%.0s-' {1..51})+${RESET}"
     echo
 }
 # Success message with animation
 success_msg() {
     local msg="$1"
     echo
-    echo -e "${GREEN}${BOLD}┌─ SUCCESS! ─────────────────────────────────────────┐${RESET}"
-    echo -e "${GREEN}${BOLD}│${RESET} ${ICON_SUCCESS} ${msg} ${GREEN}${BOLD}│${RESET}"
-    echo -e "${GREEN}${BOLD}└────────────────────────────────────────────────────┘${RESET}"
+    echo -e "${GREEN}${BOLD}+$(printf '%.0s-' {1..50})+${RESET}"
+    echo -e "${GREEN}${BOLD}|${RESET} ${ICON_SUCCESS} ${msg} ${GREEN}${BOLD}|${RESET}"
+    echo -e "${GREEN}${BOLD}+$(printf '%.0s-' {1..50})+${RESET}"
     echo
 }
 # Error message
 error_msg() {
     local msg="$1"
     echo
-    echo -e "${RED}${BOLD}┌─ ERROR! ───────────────────────────────────────────┐${RESET}"
-    echo -e "${RED}${BOLD}│${RESET} ${ICON_ERROR} ${msg} ${RED}${BOLD}│${RESET}"
-    echo -e "${RED}${BOLD}└────────────────────────────────────────────────────┘${RESET}"
+    echo -e "${RED}${BOLD}+$(printf '%.0s-' {1..48})+${RESET}"
+    echo -e "${RED}${BOLD}|${RESET} ${ICON_ERROR} ${msg} ${RED}${BOLD}|${RESET}"
+    echo -e "${RED}${BOLD}+$(printf '%.0s-' {1..48})+${RESET}"
     echo
 }
 # Info message
@@ -275,22 +285,23 @@ show_menu() {
     echo -e "${GRAD1}█${GRAD2}█${GRAD3}█${GRAD4}█${GRAD5}█${GRAD6}█${RESET} ${BOLD}DARTOTSU CONTROL PANEL${RESET} ${GRAD6}█${GRAD5}█${GRAD4}█${GRAD3}█${GRAD2}█${GRAD1}█${RESET}"
     echo
     
-    # Menu box
-    echo -e "${BOLD}${CYAN}╔═══════════════════════════════════════════════════════╗${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_ROBOT} ${GREEN}${BOLD}[I]${RESET} ${ICON_DOWNLOAD} Install Dartotsu ${GRAY}(Get Started)${RESET}      ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}      ${GREEN}Deploy the ultimate anime experience${RESET}        ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[U]${RESET} ${ICON_UPDATE} Update Dartotsu ${GRAY}(Stay Current)${RESET}     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}      ${YELLOW}Upgrade to the latest and greatest${RESET}         ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_BOMB} ${RED}${BOLD}[R]${RESET} ${ICON_UNINSTALL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}   ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}      ${RED}Complete annihilation of installation${RESET}       ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}  ${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_SPARKLES} Quit ${GRAY}(Escape the Matrix)${RESET}            ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}      ${CYAN}Return to the real world${RESET}                   ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}                                                     ${CYAN}${BOLD}║${RESET}"
-    echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════════════════════╝${RESET}"
+    # Menu box with ASCII characters
+    local menu_width=57
+    echo -e "${BOLD}${CYAN}+$(printf '%.0s-' {1..$menu_width})+${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}$(printf ' %.0s' {1..$menu_width})${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}  ${ICON_ROBOT} ${GREEN}${BOLD}[I]${RESET} ${ICON_DOWNLOAD} Install Dartotsu ${GRAY}(Get Started)${RESET}      ${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}      ${GREEN}Deploy the ultimate anime experience${RESET}        ${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}$(printf ' %.0s' {1..$menu_width})${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[U]${RESET} ${ICON_UPDATE} Update Dartotsu ${GRAY}(Stay Current)${RESET}     ${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}      ${YELLOW}Upgrade to the latest and greatest${RESET}         ${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}$(printf ' %.0s' {1..$menu_width})${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}  ${ICON_BOMB} ${RED}${BOLD}[R]${RESET} ${ICON_UNINSTALL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}   ${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}      ${RED}Complete annihilation of installation${RESET}       ${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}$(printf ' %.0s' {1..$menu_width})${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}  ${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_SPARKLES} Quit ${GRAY}(Escape the Matrix)${RESET}            ${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}      ${CYAN}Return to the real world${RESET}                   ${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}|${RESET}$(printf ' %.0s' {1..$menu_width})${BOLD}${CYAN}|${RESET}"
+    echo -e "${BOLD}${CYAN}+$(printf '%.0s-' {1..$menu_width})+${RESET}"
     echo
     echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/Q)${RESET} ${ICON_MAGIC}: "
 }
@@ -305,19 +316,20 @@ version_menu() {
     echo
     echo
     
-    # Version box
-    echo -e "${BOLD}${GRAD2}╔═══════════════════════════════════════════════════════╗${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_CROWN} ${GREEN}${BOLD}[S]${RESET} Stable Release ${GRAY}(Battle-Tested)${RESET}         ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}      ${ICON_SHIELD} Rock solid, enterprise ready            ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[P]${RESET} Pre-release ${GRAY}(Bleeding Edge)${RESET}          ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}      ${ICON_FIRE} Latest features, some bugs possible     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}  ${ICON_BOMB} ${PURPLE}${BOLD}[A]${RESET} Alpha Build ${GRAY}(Danger Zone!)${RESET}            ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}      ${ICON_SKULL} Experimental, use at your own risk     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}                                                     ${GRAD2}${BOLD}║${RESET}"
-    echo -e "${BOLD}${GRAD2}╚═══════════════════════════════════════════════════════╝${RESET}"
+    # Version box with ASCII characters
+    local version_width=57
+    echo -e "${BOLD}${GRAD2}+$(printf '%.0s-' {1..$version_width})+${RESET}"
+    echo -e "${BOLD}${GRAD2}|${RESET}$(printf ' %.0s' {1..$version_width})${BOLD}${GRAD2}|${RESET}"
+    echo -e "${BOLD}${GRAD2}|${RESET}  ${ICON_CROWN} ${GREEN}${BOLD}[S]${RESET} Stable Release ${GRAY}(Battle-Tested)${RESET}         ${BOLD}${GRAD2}|${RESET}"
+    echo -e "${BOLD}${GRAD2}|${RESET}      ${ICON_SHIELD} Rock solid, enterprise ready            ${BOLD}${GRAD2}|${RESET}"
+    echo -e "${BOLD}${GRAD2}|${RESET}$(printf ' %.0s' {1..$version_width})${BOLD}${GRAD2}|${RESET}"
+    echo -e "${BOLD}${GRAD2}|${RESET}  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[P]${RESET} Pre-release ${GRAY}(Bleeding Edge)${RESET}          ${BOLD}${GRAD2}|${RESET}"
+    echo -e "${BOLD}${GRAD2}|${RESET}      ${ICON_FIRE} Latest features, some bugs possible     ${BOLD}${GRAD2}|${RESET}"
+    echo -e "${BOLD}${GRAD2}|${RESET}$(printf ' %.0s' {1..$version_width})${BOLD}${GRAD2}|${RESET}"
+    echo -e "${BOLD}${GRAD2}|${RESET}  ${ICON_BOMB} ${PURPLE}${BOLD}[A]${RESET} Alpha Build ${GRAY}(Danger Zone!)${RESET}            ${BOLD}${GRAD2}|${RESET}"
+    echo -e "${BOLD}${GRAD2}|${RESET}      ${ICON_SKULL} Experimental, use at your own risk     ${BOLD}${GRAD2}|${RESET}"
+    echo -e "${BOLD}${GRAD2}|${RESET}$(printf ' %.0s' {1..$version_width})${BOLD}${GRAD2}|${RESET}"
+    echo -e "${BOLD}${GRAD2}+$(printf '%.0s-' {1..$version_width})+${RESET}"
     echo
     echo -ne "${BOLD}${WHITE}Choose your destiny${RESET} ${GRAY}(S/P/A)${RESET} ${ICON_MAGIC}: "
 }
