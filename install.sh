@@ -156,7 +156,7 @@ compare_commits() {
     echo -e "${BOLD}${PURPLE}╔$(printf '%*s' $box_width | tr ' ' '═')╗${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %*s' $(( (content_width - 25) / 2 )) '')${BOLD}${WHITE}COMMIT MATRIX${RESET}$(printf ' %*s' $(( (content_width - 25) / 2 )) '')${BOLD}${PURPLE}║${RESET}"
     echo -e "${BOLD}${PURPLE}╠$(printf '%*s' $box_width | tr ' ' '═')╣${RESET}"
-    echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${PURPLE}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${PURPLE}║${RESET}"
     
     # Main repository info
     local main_repo_text="${ICON_GALAXY} ${BOLD}MAIN REPOSITORY${RESET} ${GRAY}(${main_repo})${RESET}"
@@ -171,7 +171,7 @@ compare_commits() {
     local timestamp_text="${ICON_COMET} Timestamp: ${GRAY}$(date -d "$main_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}   ${timestamp_text}$(printf ' %*s' $((content_width - ${#timestamp_text} - 3)) '')${BOLD}${PURPLE}║${RESET}"
     
-    echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${PURPLE}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${PURPLE}║${RESET}"
     
     # Alpha repository info
     local alpha_repo_text="${ICON_ALIEN} ${BOLD}ALPHA REPOSITORY${RESET} ${GRAY}(${alpha_repo})${RESET}"
@@ -183,7 +183,7 @@ compare_commits() {
     local published_text="${ICON_GHOST} Published: ${GRAY}$(date -d "$alpha_date" '+%Y-%m-%d %H:%M:%S UTC')${RESET}"
     echo -e "${BOLD}${PURPLE}║${RESET}   ${published_text}$(printf ' %*s' $((content_width - ${#published_text} - 3)) '')${BOLD}${PURPLE}║${RESET}"
     
-    echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${PURPLE}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${PURPLE}║${RESET}"
     
     # Sync status
     if [[ "$alpha_tag" == *"$main_commit"* ]]; then
@@ -198,7 +198,7 @@ compare_commits() {
         echo -e "${BOLD}${PURPLE}║${RESET}   ${features_text}$(printf ' %*s' $((content_width - ${#features_text} - 3)) '')${BOLD}${PURPLE}║${RESET}"
     fi
     
-    echo -e "${BOLD}${PURPLE}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${PURPLE}║${RESET}"
+    echo -e "${BOLD}${PURPLE}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${PURPLE}║${RESET}"
     echo -e "${BOLD}${PURPLE}╚$(printf '%*s' $box_width | tr ' ' '═')╝${RESET}"
     echo
     
@@ -299,7 +299,7 @@ show_menu() {
     local content_width=$((box_width - 2))
     
     echo -e "${BOLD}${CYAN}╔$(printf '%*s' $box_width | tr ' ' '═')╗${RESET}"
-    echo -e "${BOLD}${CYAN}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${CYAN}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${CYAN}║${RESET}"
     
     # Install option
     local install_line="  ${ICON_ROBOT} ${GREEN}${BOLD}[I]${RESET} ${ICON_DOWNLOAD} Install Dartotsu ${GRAY}(Get Started)${RESET}"
@@ -307,7 +307,7 @@ show_menu() {
     local install_desc="      ${GREEN}Deploy the ultimate anime experience${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}${install_desc}$(printf ' %*s' $((content_width - ${#install_desc})) '')${BOLD}${CYAN}║${RESET}"
     
-    echo -e "${BOLD}${CYAN}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${CYAN}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${CYAN}║${RESET}"
     
     # Update option
     local update_line="  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[U]${RESET} ${ICON_UPDATE} Update Dartotsu ${GRAY}(Stay Current)${RESET}"
@@ -315,7 +315,7 @@ show_menu() {
     local update_desc="      ${YELLOW}Upgrade to the latest and greatest${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}${update_desc}$(printf ' %*s' $((content_width - ${#update_desc})) '')${BOLD}${CYAN}║${RESET}"
     
-    echo -e "${BOLD}${CYAN}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${CYAN}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${CYAN}║${RESET}"
     
     # Remove option
     local remove_line="  ${ICON_BOMB} ${RED}${BOLD}[R]${RESET} ${ICON_UNINSTALL} Remove Dartotsu ${GRAY}(Nuclear Option)${RESET}"
@@ -323,7 +323,7 @@ show_menu() {
     local remove_desc="      ${RED}Complete annihilation of installation${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}${remove_desc}$(printf ' %*s' $((content_width - ${#remove_desc})) '')${BOLD}${CYAN}║${RESET}"
     
-    echo -e "${BOLD}${CYAN}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${CYAN}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${CYAN}║${RESET}"
     
     # Quit option
     local quit_line="  ${ICON_GHOST} ${CYAN}${BOLD}[Q]${RESET} ${ICON_SPARKLES} Quit ${GRAY}(Escape the Matrix)${RESET}"
@@ -331,7 +331,7 @@ show_menu() {
     local quit_desc="      ${CYAN}Return to the real world${RESET}"
     echo -e "${BOLD}${CYAN}║${RESET}${quit_desc}$(printf ' %*s' $((content_width - ${#quit_desc})) '')${BOLD}${CYAN}║${RESET}"
     
-    echo -e "${BOLD}${CYAN}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${CYAN}║${RESET}"
+    echo -e "${BOLD}${CYAN}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${CYAN}║${RESET}"
     echo -e "${BOLD}${CYAN}╚$(printf '%*s' $box_width | tr ' ' '═')╝${RESET}"
     echo
     echo -ne "${BOLD}${WHITE}Enter the matrix${RESET} ${GRAY}(I/U/R/Q)${RESET} ${ICON_MAGIC}: "
@@ -352,7 +352,7 @@ version_menu() {
     local content_width=$((box_width - 2))
     
     echo -e "${BOLD}${GRAD2}╔$(printf '%*s' $box_width | tr ' ' '═')╗${RESET}"
-    echo -e "${BOLD}${GRAD2}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${GRAD2}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${GRAD2}║${RESET}"
     
     # Stable option
     local stable_line="  ${ICON_CROWN} ${GREEN}${BOLD}[S]${RESET} Stable Release ${GRAY}(Battle-Tested)${RESET}"
@@ -360,7 +360,7 @@ version_menu() {
     local stable_desc="      ${ICON_SHIELD} Rock solid, enterprise ready${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}${stable_desc}$(printf ' %*s' $((content_width - ${#stable_desc})) '')${BOLD}${GRAD2}║${RESET}"
     
-    echo -e "${BOLD}${GRAD2}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${GRAD2}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${GRAD2}║${RESET}"
     
     # Pre-release option
     local prerelease_line="  ${ICON_LIGHTNING} ${YELLOW}${BOLD}[P]${RESET} Pre-release ${GRAY}(Bleeding Edge)${RESET}"
@@ -368,7 +368,7 @@ version_menu() {
     local prerelease_desc="      ${ICON_FIRE} Latest features, some bugs possible${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}${prerelease_desc}$(printf ' %*s' $((content_width - ${#prerelease_desc})) '')${BOLD}${GRAD2}║${RESET}"
     
-    echo -e "${BOLD}${GRAD2}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${GRAD2}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${GRAD2}║${RESET}"
     
     # Alpha option
     local alpha_line="  ${ICON_BOMB} ${PURPLE}${BOLD}[A]${RESET} Alpha Build ${GRAY}(Danger Zone!)${RESET}"
@@ -376,7 +376,7 @@ version_menu() {
     local alpha_desc="      ${ICON_SKULL} Experimental, use at your own risk${RESET}"
     echo -e "${BOLD}${GRAD2}║${RESET}${alpha_desc}$(printf ' %*s' $((content_width - ${#alpha_desc})) '')${BOLD}${GRAD2}║${RESET}"
     
-    echo -e "${BOLD}${GRAD2}║${RESET}$(printf ' %.0s' $(seq 1 $content_width))${BOLD}${GRAD2}║${RESET}"
+    echo -e "${BOLD}${GRAD2}║${RESET}$(printf '%*s' $content_width | tr ' ' ' ')${BOLD}${GRAD2}║${RESET}"
     echo -e "${BOLD}${GRAD2}╚$(printf '%*s' $box_width | tr ' ' '═')╝${RESET}"
     echo
     echo -ne "${BOLD}${WHITE}Choose your destiny${RESET} ${GRAY}(S/P/A)${RESET} ${ICON_MAGIC}: "
